@@ -19,8 +19,11 @@ export class Guest {
   @Column({ nullable: true })
   phone: string;
 
-  @Column("simple-json")
-  answers: Record<string, any>;
+  @Column({ default: false })
+  completed: boolean;
+
+  @Column("simple-json", { nullable: true })
+  assignedQuestionIds: string[];
 
   @CreateDateColumn()
   createdAt: Date;

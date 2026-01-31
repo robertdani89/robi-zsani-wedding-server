@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from "@nestjs/common";
 import { GuestService } from "./guest.service";
 import { CreateGuestDto } from "./dto/create-guest.dto";
@@ -20,6 +21,15 @@ export class GuestController {
     return this.guestService.create(createGuestDto);
   }
 
+  @Post("register")
+  register(
+    @Body() body: { name: string },
+    @Query("questionCount") questionCount?: string,
+  ) {
+    const count = questionCount ? parseInt(questionCount, 10) : 8;
+    return this.guestService.registerWithQuestions(body.name, count);
+  }
+
   @Get()
   findAll() {
     return this.guestService.findAll();
@@ -28,6 +38,11 @@ export class GuestController {
   @Get(":id")
   findOne(@Param("id") id: string) {
     return this.guestService.findOne(id);
+  }
+
+  @Get(":id/questions")
+  getAssignedQuestions(@Param("id") id: string) {
+    return this.guestService.getAssignedQuestions(id);
   }
 
   @Patch(":id")
