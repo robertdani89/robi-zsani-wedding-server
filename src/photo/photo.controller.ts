@@ -12,10 +12,7 @@ import {
   Res,
 } from "@nestjs/common";
 import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
-import { diskStorage } from "multer";
 import { PhotoService } from "./photo.service";
-import { v4 as uuidv4 } from "uuid";
-import * as path from "path";
 import { Response } from "express";
 
 @Controller("photos")
@@ -23,31 +20,17 @@ export class PhotoController {
   constructor(private readonly photoService: PhotoService) {}
 
   @Post("upload")
-  @UseInterceptors(
-    FileInterceptor("photo", {
-      storage: diskStorage({
-        destination: "./uploads",
-        filename: (req, file, cb) => {
-          const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
-          cb(null, uniqueName);
-        },
-      }),
-      fileFilter: (req, file, cb) => {
-        if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
-          cb(new BadRequestException("Only image files are allowed"), false);
-        } else {
-          cb(null, true);
-        }
-      },
-      limits: {
-        fileSize: 50 * 1024 * 1024, // 50MB
-      },
-    }),
-  )
+  @UseInterceptors(FileInterceptor("photo"))
   async uploadPhoto(
     @UploadedFile() file: Express.Multer.File,
     @Body("guestId") guestId: string,
   ) {
+    console.log("Upload request received, file:", file, "guestId:", guestId);
+    if (!file) {
+      throw new BadRequestException(
+        "No file uploaded. Please provide an image file.",
+      );
+    }
     if (!guestId) {
       throw new BadRequestException("Guest ID is required");
     }
@@ -55,33 +38,16 @@ export class PhotoController {
   }
 
   @Post("upload-multiple")
-  @UseInterceptors(
-    FilesInterceptor("photos", 5, {
-      storage: diskStorage({
-        destination: "./uploads",
-        filename: (req, file, cb) => {
-          const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
-          cb(null, uniqueName);
-        },
-      }),
-      fileFilter: (req, file, cb) => {
-        if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
-          cb(new BadRequestException("Only image files are allowed"), false);
-        } else {
-          cb(null, true);
-        }
-      },
-      limits: {
-        fileSize: 50 * 1024 * 1024, // 50MB per file
-      },
-    }),
-  )
+  @UseInterceptors(FilesInterceptor("photos", 5))
   async uploadMultiplePhotos(
     @UploadedFiles() files: Express.Multer.File[],
     @Body("guestId") guestId: string,
   ) {
     if (!guestId) {
       throw new BadRequestException("Guest ID is required");
+    }
+    if (!files || files.length === 0) {
+      throw new BadRequestException("No files uploaded");
     }
     const photos = await Promise.all(
       files.map((file) => this.photoService.create(file, guestId)),
@@ -110,6 +76,23 @@ export class PhotoController {
     if (!photo) {
       return res.status(404).send("Photo not found");
     }
+    return res.sendFile(photo.path, { root: "." });
+  }
+
+  @Get(":id/thumbnail")
+  async getPhotoThumbnail(@Param("id") id: string, @Res() res: Response) {
+    const photo = await this.photoService.findOne(id);
+    if (!photo) {
+      return res.status(404).send("Photo not found");
+    }
+
+    // Check if thumbnail exists, if not return original
+    const thumbnailPath = await this.photoService.getThumbnailPath(id);
+    if (thumbnailPath) {
+      return res.sendFile(thumbnailPath);
+    }
+
+    // Fallback to original file
     return res.sendFile(photo.path, { root: "." });
   }
 
