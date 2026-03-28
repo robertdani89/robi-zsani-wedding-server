@@ -13,18 +13,18 @@ export class Guest {
   @Column()
   name: string;
 
-  @Column({ nullable: true })
-  email: string;
-
-  @Column({ nullable: true })
-  phone: string;
-
   @Column({ default: false })
   completed: boolean;
 
   @Column("simple-json", { nullable: true })
-  assignedQuestionIds: string[];
+  assignedQuestionIds: string[] | null;
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @Column({ type: "datetime", nullable: true })
+  gotGiftAt: Date | null;
+
+  @Column({ nullable: true })
+  typeOfGift: string | null;
 }

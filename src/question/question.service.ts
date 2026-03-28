@@ -1,136 +1,37 @@
 import { Injectable, OnModuleInit } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { Question, QuestionCategory, QuestionType } from "./question.entity";
+import { Question, QuestionType } from "./question.entity";
 
-const SEED_QUESTIONS: Partial<Question>[] = [
+export const QUESTIONS: Question[] = [
   {
     id: "q1",
-    category: QuestionCategory.TRAVEL,
-    text: "Where would you like to go on your next vacation?",
-    type: QuestionType.SINGLE_CHOICE,
+    text: "Milyen kirándulásra jönnél velünk szívesen?",
+    type: QuestionType.MULTIPLE_CHOICE,
     options: [
-      "Beach paradise",
-      "Mountain retreat",
-      "City exploration",
-      "Countryside escape",
+      "Strandolás",
+      "Hegyi visszavonulás",
+      "Biciklis túra",
+      "Borkóstoló kúra",
     ],
   },
   {
     id: "q2",
-    category: QuestionCategory.TRAVEL,
-    text: "What type of accommodation do you prefer?",
-    type: QuestionType.SINGLE_CHOICE,
-    options: ["Luxury hotel", "Cozy Airbnb", "Camping", "Boutique hostel"],
+    text: "Milyen esti programra csatlakoznál hozzánk szívesen?",
+    type: QuestionType.MULTIPLE_CHOICE,
+    options: ["Társasjáték est", "Filmnézés", "Színház", "Koncert"],
   },
   {
     id: "q3",
-    category: QuestionCategory.TRAVEL,
-    text: "Which travel style describes you best?",
+    text: "Fiút vagy lányt tippelnél nekünk első babára?",
     type: QuestionType.SINGLE_CHOICE,
-    options: [
-      "Adventure seeker",
-      "Relaxation lover",
-      "Cultural explorer",
-      "Foodie traveler",
-    ],
+    options: ["Fiú", "Lány", "Maradjatok a kutyáknál!"],
   },
+
   {
     id: "q4",
-    category: QuestionCategory.ACTIVITIES,
-    text: "What activities do you enjoy the most? (Select all that apply)",
-    type: QuestionType.MULTIPLE_CHOICE,
-    options: [
-      "Reading",
-      "Sports",
-      "Cooking",
-      "Gaming",
-      "Hiking",
-      "Music",
-      "Art",
-    ],
-  },
-  {
-    id: "q5",
-    category: QuestionCategory.ACTIVITIES,
-    text: "How do you prefer to spend your weekends?",
-    type: QuestionType.SINGLE_CHOICE,
-    options: [
-      "Outdoor adventures",
-      "Social gatherings",
-      "Home relaxation",
-      "Cultural events",
-    ],
-  },
-  {
-    id: "q6",
-    category: QuestionCategory.ACTIVITIES,
-    text: "What's your favorite way to stay active?",
-    type: QuestionType.SINGLE_CHOICE,
-    options: [
-      "Gym workouts",
-      "Team sports",
-      "Yoga/Pilates",
-      "Running/Walking",
-      "Not my thing",
-    ],
-  },
-  {
-    id: "q7",
-    category: QuestionCategory.FUN,
-    text: "What's your go-to comfort food?",
+    text: "Ossz meg velünk egy jó tanácsot a házassághoz vagy a szülői léthez!",
     type: QuestionType.FREE_TEXT,
-    options: null,
-  },
-  {
-    id: "q8",
-    category: QuestionCategory.FUN,
-    text: "If you could have any superpower, what would it be?",
-    type: QuestionType.SINGLE_CHOICE,
-    options: [
-      "Flying",
-      "Invisibility",
-      "Super strength",
-      "Time travel",
-      "Mind reading",
-    ],
-  },
-  {
-    id: "q9",
-    category: QuestionCategory.FUN,
-    text: "What's your ideal way to celebrate?",
-    type: QuestionType.SINGLE_CHOICE,
-    options: [
-      "Big party",
-      "Intimate dinner",
-      "Quiet evening at home",
-      "Adventure trip",
-    ],
-  },
-  {
-    id: "q10",
-    category: QuestionCategory.FUN,
-    text: "Coffee or tea?",
-    type: QuestionType.SINGLE_CHOICE,
-    options: ["Coffee", "Tea", "Both!", "Neither"],
-  },
-  {
-    id: "q11",
-    category: QuestionCategory.FUN,
-    text: "What makes you laugh the most?",
-    type: QuestionType.FREE_TEXT,
-    options: null,
-  },
-  {
-    id: "q12",
-    category: QuestionCategory.FUN,
-    text: "Morning person or night owl?",
-    type: QuestionType.SINGLE_CHOICE,
-    options: [
-      "Definitely morning",
-      "Night owl all the way",
-      "Depends on the day",
-    ],
   },
 ];
 
@@ -148,11 +49,9 @@ export class QuestionService implements OnModuleInit {
   private async seedQuestions() {
     const count = await this.questionRepository.count();
     if (count === 0) {
-      console.log("Seeding questions...");
-      for (const question of SEED_QUESTIONS) {
+      for (const question of QUESTIONS) {
         await this.questionRepository.save(question);
       }
-      console.log("Questions seeded successfully");
     }
   }
 

@@ -17,12 +17,6 @@ export class Question {
   @PrimaryColumn()
   id: string;
 
-  @Column({
-    type: "text",
-    enum: QuestionCategory,
-  })
-  category: QuestionCategory;
-
   @Column()
   text: string;
 
@@ -33,5 +27,5 @@ export class Question {
   type: QuestionType;
 
   @Column("simple-json", { nullable: true })
-  options: string[] | null;
+  options?: string[] | null;
 }
