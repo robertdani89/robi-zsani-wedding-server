@@ -1,5 +1,5 @@
-import { Controller, Get, Param, Req } from "@nestjs/common";
-import { Request } from "express";
+import { Controller, Get, Param, Req, Res } from "@nestjs/common";
+import { Request, Response } from "express";
 import { GalleryService } from "./gallery.service";
 
 @Controller("gallery")
@@ -30,5 +30,33 @@ export class GalleryController {
       collectionId,
       this.getBaseUrl(req),
     );
+  }
+
+  @Get("collections/:collectionId/photos/:photoId/file")
+  public async getPhotoFile(
+    @Param("collectionId") collectionId: string,
+    @Param("photoId") photoId: string,
+    @Res() res: Response,
+  ) {
+    const filePath = await this.galleryService.getPhotoPath(
+      collectionId,
+      photoId,
+      "file",
+    );
+    return res.sendFile(filePath);
+  }
+
+  @Get("collections/:collectionId/photos/:photoId/thumbnail")
+  public async getPhotoThumbnail(
+    @Param("collectionId") collectionId: string,
+    @Param("photoId") photoId: string,
+    @Res() res: Response,
+  ) {
+    const filePath = await this.galleryService.getPhotoPath(
+      collectionId,
+      photoId,
+      "thumbnail",
+    );
+    return res.sendFile(filePath);
   }
 }

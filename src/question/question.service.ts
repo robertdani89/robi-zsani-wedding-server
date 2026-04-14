@@ -34,7 +34,8 @@ export class QuestionService implements OnModuleInit {
 
   async getRandomQuestions(count: number = 8): Promise<Question[]> {
     const allQuestions = await this.findAll();
-    const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, Math.min(count, shuffled.length));
+    // const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+    // return shuffled.slice(0, Math.min(count, shuffled.length));
+    return allQuestions.slice(0, Math.min(count, allQuestions.length));
   }
 }
