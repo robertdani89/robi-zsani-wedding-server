@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Patch,
+  Put,
   Param,
   Delete,
   Query,
@@ -47,6 +48,11 @@ export class GuestController {
 
   @Patch(":id")
   update(@Param("id") id: string, @Body() updateGuestDto: UpdateGuestDto) {
+    return this.guestService.update(id, updateGuestDto);
+  }
+
+  @Put(":id")
+  replace(@Param("id") id: string, @Body() updateGuestDto: UpdateGuestDto) {
     return this.guestService.update(id, updateGuestDto);
   }
 

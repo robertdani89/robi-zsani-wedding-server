@@ -2,6 +2,7 @@ import { AdminModule } from "./admin/admin.module";
 import { AnswerModule } from "./answer/answer.module";
 import { AppController } from "./app.controller";
 import { ConfigModule } from "@nestjs/config";
+import { GalleryModule } from "./gallery/gallery.module";
 import { GuestModule } from "./guest/guest.module";
 import { Module } from "@nestjs/common";
 import { PhotoModule } from "./photo/photo.module";
@@ -32,6 +33,7 @@ import { join } from "path";
     AnswerModule,
     AdminModule,
     SongModule,
+    GalleryModule,
   ],
   controllers: [AppController],
 })

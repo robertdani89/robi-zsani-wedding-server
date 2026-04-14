@@ -1,5 +1,7 @@
 import { Column, Entity, PrimaryColumn } from "typeorm";
 
+import type { LocalizedText } from "./questions";
+
 export enum QuestionType {
   SINGLE_CHOICE = "single_choice",
   MULTIPLE_CHOICE = "multiple_choice",
@@ -17,8 +19,8 @@ export class Question {
   @PrimaryColumn()
   id: string;
 
-  @Column()
-  text: string;
+  @Column("simple-json")
+  text: LocalizedText;
 
   @Column({
     type: "text",
@@ -27,5 +29,5 @@ export class Question {
   type: QuestionType;
 
   @Column("simple-json", { nullable: true })
-  options?: string[] | null;
+  options?: LocalizedText[] | null;
 }

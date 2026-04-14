@@ -1,23 +1,39 @@
 import {
+  BadRequestException,
+  Body,
   Controller,
-  Get,
-  Post,
-  Param,
   Delete,
-  UseInterceptors,
+  Get,
+  Param,
+  Post,
+  Req,
+  Res,
   UploadedFile,
   UploadedFiles,
-  Body,
-  BadRequestException,
-  Res,
+  UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
+import { Request, Response } from "express";
+import * as path from "path";
+import { GalleryService } from "../gallery/gallery.service";
 import { PhotoService } from "./photo.service";
-import { Response } from "express";
 
 @Controller("photos")
 export class PhotoController {
-  constructor(private readonly photoService: PhotoService) {}
+  constructor(
+    private readonly photoService: PhotoService,
+    private readonly galleryService: GalleryService,
+  ) {}
+
+  private getBaseUrl(req: Request): string {
+    const forwardedProto = req.headers["x-forwarded-proto"];
+    const protocol =
+      typeof forwardedProto === "string"
+        ? forwardedProto
+        : req.protocol || "http";
+
+    return `${protocol}://${req.get("host")}/api`;
+  }
 
   @Post("upload")
   @UseInterceptors(FileInterceptor("photo"))
@@ -65,6 +81,22 @@ export class PhotoController {
     return this.photoService.findByGuest(guestId);
   }
 
+  @Get("collections")
+  getCollections(@Req() req: Request) {
+    return this.galleryService.getCollections(this.getBaseUrl(req));
+  }
+
+  @Get("collections/:collectionId")
+  getCollectionPhotos(
+    @Param("collectionId") collectionId: string,
+    @Req() req: Request,
+  ) {
+    return this.galleryService.getCollectionPhotos(
+      collectionId,
+      this.getBaseUrl(req),
+    );
+  }
+
   @Get(":id")
   findOne(@Param("id") id: string) {
     return this.photoService.findOne(id);
@@ -76,7 +108,7 @@ export class PhotoController {
     if (!photo) {
       return res.status(404).send("Photo not found");
     }
-    return res.sendFile(photo.path, { root: "." });
+    return res.sendFile(path.resolve(photo.path));
   }
 
   @Get(":id/thumbnail")
@@ -93,7 +125,7 @@ export class PhotoController {
     }
 
     // Fallback to original file
-    return res.sendFile(photo.path, { root: "." });
+    return res.sendFile(path.resolve(photo.path));
   }
 
   @Delete(":id")

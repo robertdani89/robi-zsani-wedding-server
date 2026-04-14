@@ -1,5 +1,6 @@
 import * as path from "path";
 
+import { GalleryModule } from "../gallery/gallery.module";
 import { Module } from "@nestjs/common";
 import { MulterModule } from "@nestjs/platform-express";
 import { Photo } from "./photo.entity";
@@ -12,6 +13,7 @@ import { v4 as uuidv4 } from "uuid";
 @Module({
   imports: [
     TypeOrmModule.forFeature([Photo]),
+    GalleryModule,
     MulterModule.register({
       storage: diskStorage({
         destination: "./uploads",
