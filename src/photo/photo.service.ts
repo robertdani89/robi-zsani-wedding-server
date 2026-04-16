@@ -92,17 +92,23 @@ export class PhotoService {
 
   async remove(id: string): Promise<void> {
     const photo = await this.findOne(id);
+
     if (photo) {
-      // Remove original file
-      if (fs.existsSync(photo.path)) {
-        fs.unlinkSync(photo.path);
-      }
-      // Remove thumbnail
-      const thumbnailFilePath = path.join(this.thumbnailPath, `${id}.jpg`);
-      if (fs.existsSync(thumbnailFilePath)) {
-        fs.unlinkSync(thumbnailFilePath);
+      try {
+        // Remove original file
+        if (fs.existsSync(photo.path)) {
+          fs.unlinkSync(photo.path);
+        }
+        // Remove thumbnail
+        const thumbnailFilePath = path.join(this.thumbnailPath, `${id}.jpg`);
+        if (fs.existsSync(thumbnailFilePath)) {
+          fs.unlinkSync(thumbnailFilePath);
+        }
+
+        await this.photoRepository.delete(id);
+      } catch (error) {
+        console.error("Error deleting files:", error);
       }
     }
-    await this.photoRepository.delete(id);
   }
 }
