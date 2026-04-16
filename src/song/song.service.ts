@@ -1,6 +1,10 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { IsNull, Repository } from "typeorm";
 import { Song } from "./song.entity";
 import { CreateSongDto } from "./dto/create-song.dto";
 import { Guest } from "../guest/guest.entity";
@@ -120,22 +124,6 @@ export class SongService {
       throw new NotFoundException("Guest not found");
     }
 
-    // Check if guest already has a song selected, update it
-    const existingSong = await this.songRepository.findOne({
-      where: { guest: { id: guest.id } },
-    });
-
-    if (existingSong) {
-      // Update existing song
-      existingSong.spotifyId = createSongDto.spotifyId;
-      existingSong.name = createSongDto.name;
-      existingSong.artist = createSongDto.artist;
-      existingSong.album = createSongDto.album;
-      existingSong.albumArt = createSongDto.albumArt;
-      existingSong.previewUrl = createSongDto.previewUrl;
-      return this.songRepository.save(existingSong);
-    }
-
     // Create new song
     const song = this.songRepository.create({
       ...createSongDto,
@@ -157,6 +145,51 @@ export class SongService {
       relations: ["guest"],
       order: { createdAt: "DESC" },
     });
+  }
+
+  async findNextPending(): Promise<{
+    id: string;
+    spotifyId: string;
+    name: string;
+    artist: string;
+    album: string;
+    albumArt: string;
+    previewUrl: string;
+    createdAt: Date;
+  } | null> {
+    const song = await this.songRepository.findOne({
+      where: { allowed: IsNull() },
+      order: { createdAt: "ASC" },
+    });
+
+    if (!song) {
+      return null;
+    }
+
+    return {
+      id: song.id,
+      spotifyId: song.spotifyId,
+      name: song.name,
+      artist: song.artist,
+      album: song.album,
+      albumArt: song.albumArt,
+      previewUrl: song.previewUrl,
+      createdAt: song.createdAt,
+    };
+  }
+
+  async updateAllowed(id: string, allowed: boolean): Promise<Song> {
+    if (typeof allowed !== "boolean") {
+      throw new BadRequestException("allowed must be a boolean");
+    }
+
+    const song = await this.songRepository.findOne({ where: { id } });
+    if (!song) {
+      throw new NotFoundException("Song not found");
+    }
+
+    song.allowed = allowed;
+    return this.songRepository.save(song);
   }
 
   async remove(id: string): Promise<void> {

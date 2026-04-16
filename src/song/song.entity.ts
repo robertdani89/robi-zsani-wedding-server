@@ -36,4 +36,10 @@ export class Song {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @Column({ nullable: true, type: "boolean" })
+  allowed: boolean | null;
+
+  @Column({ nullable: true, type: "datetime" })
+  playedAt: Date | null;
 }

@@ -1,4 +1,5 @@
 import {
+  Patch,
   Controller,
   Get,
   Post,
@@ -9,6 +10,7 @@ import {
 } from "@nestjs/common";
 import { SongService } from "./song.service";
 import { CreateSongDto } from "./dto/create-song.dto";
+import { UpdateSongAllowedDto } from "./dto/update-song-allowed.dto";
 
 @Controller("songs")
 export class SongController {
@@ -29,9 +31,22 @@ export class SongController {
     return this.songService.findAll();
   }
 
+  @Get("next-pending")
+  async findNextPending() {
+    return this.songService.findNextPending();
+  }
+
   @Get("guest/:guestId")
   async findByGuest(@Param("guestId") guestId: string) {
     return this.songService.findByGuest(guestId);
+  }
+
+  @Patch(":id/allowed")
+  async updateAllowed(
+    @Param("id") id: string,
+    @Body() updateSongAllowedDto: UpdateSongAllowedDto,
+  ) {
+    return this.songService.updateAllowed(id, updateSongAllowedDto.allowed);
   }
 
   @Delete(":id")
