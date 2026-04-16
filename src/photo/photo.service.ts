@@ -104,11 +104,11 @@ export class PhotoService {
         if (fs.existsSync(thumbnailFilePath)) {
           fs.unlinkSync(thumbnailFilePath);
         }
-
-        await this.photoRepository.delete(id);
       } catch (error) {
         console.error("Error deleting files:", error);
       }
     }
+
+    await this.photoRepository.delete(id);
   }
 }
