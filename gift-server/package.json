@@ -1,0 +1,13 @@
+{
+  "name": "gift-server",
+  "version": "1.0.0",
+  "description": "Raspberry Pi servo controller for wedding gift box",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "pigpio": "^3.3.1"
+  }
+}

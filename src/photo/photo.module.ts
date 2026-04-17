@@ -15,6 +15,9 @@ import { v4 as uuidv4 } from "uuid";
     TypeOrmModule.forFeature([Photo]),
     GalleryModule,
     MulterModule.register({
+      limits: {
+        fileSize: 10 * 1024 * 1024,
+      },
       storage: diskStorage({
         destination: "./uploads",
         filename: (req, file, cb) => {
