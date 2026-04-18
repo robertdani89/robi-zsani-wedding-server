@@ -1,14 +1,15 @@
 import {
-  WebSocketGateway,
-  WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  WebSocketGateway,
+  WebSocketServer,
 } from "@nestjs/websockets";
+
+import { ErrorReportService } from "../error-report/error-report.service";
 import { Logger } from "@nestjs/common";
 import { Server } from "ws";
 import WebSocket from "ws";
 import { v4 as uuidv4 } from "uuid";
-import { ErrorReportService } from "../error-report/error-report.service";
 
 interface OpenResultMsg {
   type: "open_result";
@@ -70,7 +71,7 @@ export class GiftWsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async sendOpen(
     gender: "man" | "woman",
   ): Promise<{ status: string; message?: string }> {
-    if (!this.giftSocket || this.giftSocket.readyState !== WebSocket.OPEN) {
+    if (!this.giftSocket || !this.isConnected()) {
       return { status: "error", message: "Gift server not connected" };
     }
 
@@ -92,6 +93,6 @@ export class GiftWsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   isConnected(): boolean {
-    return this.giftSocket?.readyState === WebSocket.OPEN;
+    return this.giftSocket?.readyState === 1; // WebSocket.OPEN
   }
 }

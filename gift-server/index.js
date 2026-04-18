@@ -1,6 +1,8 @@
+require("dotenv").config();
 const express = require("express");
 const WebSocket = require("ws");
 const app = express();
+const Gpio = require('pigpio').Gpio;
 
 // --- Configuration ---
 const PORT = process.env.PORT || 3001;
@@ -14,9 +16,9 @@ if (!MAIN_SERVER_WS_URL) {
 }
 
 // GPIO pins for the three servo motors
-const GPIO_PIN_MAN = parseInt(process.env.GPIO_PIN_MAN || "18", 10);
-const GPIO_PIN_WOMAN = parseInt(process.env.GPIO_PIN_WOMAN || "23", 10);
-const GPIO_PIN_SHARED = parseInt(process.env.GPIO_PIN_SHARED || "24", 10);
+const GPIO_PIN_MAN = parseInt(process.env.GPIO_PIN_MAN || "23", 10);
+const GPIO_PIN_WOMAN = parseInt(process.env.GPIO_PIN_WOMAN || "24", 10);
+const GPIO_PIN_SHARED = parseInt(process.env.GPIO_PIN_SHARED || "25", 10);
 
 // Servo positions in microseconds (adjust per physical calibration)
 const OPEN_POS_MAN = 2200;
@@ -26,17 +28,15 @@ const CLOSED_POS_WOMAN = 1300;
 const OPEN_POS_SHARED = 2200;
 const CLOSED_POS_SHARED = 1300;
 
-const STEP_DELAY_MS = 15;
+const STEP_DELAY_MS = 20;
 const PAUSE_MS = 3000;
 
 // --- GPIO setup ---
-let Gpio;
 let servoMan;
 let servoWoman;
 let servoShared;
 
 try {
-  Gpio = require("pigpio").Gpio;
   servoMan = new Gpio(GPIO_PIN_MAN, { mode: Gpio.OUTPUT });
   servoWoman = new Gpio(GPIO_PIN_WOMAN, { mode: Gpio.OUTPUT });
   servoShared = new Gpio(GPIO_PIN_SHARED, { mode: Gpio.OUTPUT });
@@ -59,10 +59,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function sweep(servo, from, to) {
   if (!servo) return;
-  const range = Math.abs(to - from);
-  const usStep = ((to - from) / range) * 15;
+
+  const usStep = (to - from) / 15;
   let current = from;
-  for (let i = 0; i <= range; i++) {
+  for (let i = 0; i <= 15; i++) {
     servo.servoWrite(Math.round(current));
     current += usStep;
     await sleep(STEP_DELAY_MS);
