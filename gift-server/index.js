@@ -16,42 +16,50 @@ if (!MAIN_SERVER_WS_URL) {
 }
 
 // GPIO pins for the three servo motors
-const GPIO_PIN_MAN = parseInt(process.env.GPIO_PIN_MAN || "23", 10);
+const GPIO_PIN_MAN = parseInt(process.env.GPIO_PIN_MAN || "22", 10);
+const GPIO_PIN_MAN_2 = parseInt(process.env.GPIO_PIN_MAN_2 || "23", 10);
 const GPIO_PIN_WOMAN = parseInt(process.env.GPIO_PIN_WOMAN || "24", 10);
-const GPIO_PIN_SHARED = parseInt(process.env.GPIO_PIN_SHARED || "25", 10);
+const GPIO_PIN_WOMAN_2 = parseInt(process.env.GPIO_PIN_WOMAN_2 || "25", 10);
 
 // Servo positions in microseconds (adjust per physical calibration)
 const OPEN_POS_MAN = 2200;
 const CLOSED_POS_MAN = 1300;
+const OPEN_POS_MAN_2 = 2200;
+const CLOSED_POS_MAN_2 = 1300;
+
 const OPEN_POS_WOMAN = 2200;
 const CLOSED_POS_WOMAN = 1300;
-const OPEN_POS_SHARED = 2200;
-const CLOSED_POS_SHARED = 1300;
+const OPEN_POS_WOMAN_2 = 2200;
+const CLOSED_POS_WOMAN_2 = 1300;
 
 const STEP_DELAY_MS = 20;
 const PAUSE_MS = 3000;
 
 // --- GPIO setup ---
-let servoMan;
-let servoWoman;
-let servoShared;
-
+let servoMan1;
+let servoWoman1;
+let servoMan2;
+let servoWoman2;
 try {
-  servoMan = new Gpio(GPIO_PIN_MAN, { mode: Gpio.OUTPUT });
-  servoWoman = new Gpio(GPIO_PIN_WOMAN, { mode: Gpio.OUTPUT });
-  servoShared = new Gpio(GPIO_PIN_SHARED, { mode: Gpio.OUTPUT });
-  servoMan.servoWrite(CLOSED_POS_MAN);
-  servoWoman.servoWrite(CLOSED_POS_WOMAN);
-  servoShared.servoWrite(CLOSED_POS_SHARED);
+  servoMan1 = new Gpio(GPIO_PIN_MAN, { mode: Gpio.OUTPUT });
+  servoMan2 = new Gpio(GPIO_PIN_MAN_2, { mode: Gpio.OUTPUT });
+  servoWoman1 = new Gpio(GPIO_PIN_WOMAN, { mode: Gpio.OUTPUT });
+  servoWoman2 = new Gpio(GPIO_PIN_WOMAN_2, { mode: Gpio.OUTPUT });
+
+  servoMan1.servoWrite(CLOSED_POS_MAN);
+  servoMan2.servoWrite(CLOSED_POS_MAN_2);
+  servoWoman1.servoWrite(CLOSED_POS_WOMAN);
+  servoWoman2.servoWrite(CLOSED_POS_WOMAN_2);
   console.log(
-    `Servos initialized on GPIO man=${GPIO_PIN_MAN}, woman=${GPIO_PIN_WOMAN}, shared=${GPIO_PIN_SHARED}`,
+    `Servos initialized on GPIO man=${GPIO_PIN_MAN}, man2=${GPIO_PIN_MAN_2}, woman=${GPIO_PIN_WOMAN},  woman2=${GPIO_PIN_WOMAN_2}`,
   );
 } catch (err) {
   console.warn("pigpio not available – running in simulation mode");
   console.warn(err.message);
-  servoMan = null;
-  servoWoman = null;
-  servoShared = null;
+  servoMan1 = null;
+  servoWoman1 = null;
+  servoMan2 = null;
+  servoWoman2 = null;
 }
 
 // --- Helpers ---
@@ -82,9 +90,12 @@ async function openGiftSequence(gender) {
   console.log(`Starting gift sequence for: ${gender}`);
 
   const isMan = gender === "man";
-  const servoFirst = isMan ? servoMan : servoWoman;
+  const servoFirst = isMan ? servoMan1 : servoWoman1;
+  const servoSecond = isMan ? servoMan2 : servoWoman2;
   const openPosFirst = isMan ? OPEN_POS_MAN : OPEN_POS_WOMAN;
   const closedPosFirst = isMan ? CLOSED_POS_MAN : CLOSED_POS_WOMAN;
+  const openPosSecond = isMan ? OPEN_POS_MAN_2 : OPEN_POS_WOMAN_2;
+  const closedPosSecond = isMan ? CLOSED_POS_MAN_2 : CLOSED_POS_WOMAN_2;
 
   try {
     // Step 1: Open the gender-specific (1st gift) servo, then close it
@@ -93,10 +104,10 @@ async function openGiftSequence(gender) {
     await sweep(servoFirst, openPosFirst, closedPosFirst);
     await sleep(PAUSE_MS);
 
-    // Step 2: Open the shared (2nd gift) servo, then close it
-    await sweep(servoShared, CLOSED_POS_SHARED, OPEN_POS_SHARED);
+    // Step 2: Open the gender-specific (2nd gift) servo, then close it
+    await sweep(servoSecond, closedPosSecond, openPosSecond);
     await sleep(PAUSE_MS);
-    await sweep(servoShared, OPEN_POS_SHARED, CLOSED_POS_SHARED);
+    await sweep(servoSecond, openPosSecond, closedPosSecond);
     await sleep(PAUSE_MS);
 
     console.log("Gift sequence complete");
@@ -110,7 +121,7 @@ async function openGiftSequence(gender) {
 app.get("/health", (_req, res) => {
   res.json({
     status: "ok",
-    gpio: servoMan !== null,
+    gpio: servoMan1 !== null,
     busy,
     wsConnected: ws !== null && ws.readyState === WebSocket.OPEN,
   });
@@ -198,9 +209,10 @@ connectToMainServer();
 
 // Graceful shutdown
 process.on("SIGINT", () => {
-  if (servoMan) servoMan.servoWrite(0);
-  if (servoWoman) servoWoman.servoWrite(0);
-  if (servoShared) servoShared.servoWrite(0);
+  if (servoMan1) servoMan1.servoWrite(0);
+  if (servoWoman1) servoWoman1.servoWrite(0);
+  if (servoMan2) servoMan2.servoWrite(0);
+  if (servoWoman2) servoWoman2.servoWrite(0);
   if (ws) ws.close();
   process.exit();
 });
