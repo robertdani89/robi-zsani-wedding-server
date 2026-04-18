@@ -1,69 +1,44 @@
 import { Injectable, Logger } from "@nestjs/common";
-
-import { ConfigService } from "@nestjs/config";
 import { GuestService } from "../guest/guest.service";
+import { GiftWsGateway } from "./gift-ws.gateway";
 
 export type GiftType = "gift_for_man" | "gift_for_ladies";
 
 @Injectable()
 export class GiftService {
   private readonly logger = new Logger(GiftService.name);
-  private readonly giftServerUrl: string;
 
   constructor(
-    private configService: ConfigService,
     private guestService: GuestService,
-  ) {
-    this.giftServerUrl =
-      this.configService.get<string>("GIFT_SERVER_URL") ||
-      "http://localhost:3001";
-  }
+    private giftWsGateway: GiftWsGateway,
+  ) {}
 
   async triggerOpen(
     guestId: string,
     giftType: GiftType,
   ): Promise<{ status: string; message?: string }> {
-    try {
-      this.logger.log(
-        `Sending open command to gift server at ${this.giftServerUrl}`,
-      );
-      const response = await fetch(`${this.giftServerUrl}/open`, {
-        method: "POST",
-      });
-      const data = await response.json();
+    const gender = giftType === "gift_for_man" ? "man" : "woman";
+    this.logger.log(`Sending open command via WebSocket for: ${gender}`);
 
-      if (!response.ok) {
-        this.logger.warn(
-          `Gift server responded with ${response.status}: ${data.message}`,
-        );
-        return {
-          status: "error",
-          message: data.message || "Gift server error",
-        };
-      }
+    const result = await this.giftWsGateway.sendOpen(gender);
 
-      this.logger.log("Gift sequence triggered successfully");
-      await this.guestService.update(guestId, {
-        gotGiftAt: new Date(),
-        typeOfGift: giftType,
-      });
-      return { status: "ok" };
-    } catch (error: any) {
-      this.logger.error(`Failed to reach gift server: ${error.message}`);
-      return { status: "error", message: "Gift server unreachable" };
+    if (result.status !== "done") {
+      this.logger.warn(`Gift server responded: ${result.status} – ${result.message}`);
+      return { status: "error", message: result.message || "Gift server error" };
     }
+
+    this.logger.log("Gift sequence triggered successfully");
+    await this.guestService.update(guestId, {
+      gotGiftAt: new Date(),
+      typeOfGift: giftType,
+    });
+    return { status: "ok" };
   }
 
-  async getStatus(): Promise<{
-    status: string;
-    gpio?: boolean;
-    busy?: boolean;
-  }> {
-    try {
-      const response = await fetch(`${this.giftServerUrl}/health`);
-      return await response.json();
-    } catch {
-      return { status: "unreachable" };
-    }
+  getStatus(): { status: string; connected: boolean } {
+    return {
+      status: "ok",
+      connected: this.giftWsGateway.isConnected(),
+    };
   }
 }

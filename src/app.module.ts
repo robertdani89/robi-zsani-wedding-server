@@ -2,6 +2,7 @@ import { AdminModule } from "./admin/admin.module";
 import { AnswerModule } from "./answer/answer.module";
 import { AppController } from "./app.controller";
 import { ConfigModule } from "@nestjs/config";
+import { ErrorReportModule } from "./error-report/error-report.module";
 import { GalleryModule } from "./gallery/gallery.module";
 import { GiftModule } from "./gift/gift.module";
 import { GuestModule } from "./guest/guest.module";
@@ -28,6 +29,7 @@ import { join } from "path";
       rootPath: join(__dirname, "..", "uploads"),
       serveRoot: "/uploads",
     }),
+    ErrorReportModule,
     GuestModule,
     PhotoModule,
     QuestionModule,

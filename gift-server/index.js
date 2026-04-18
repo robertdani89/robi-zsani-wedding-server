@@ -1,36 +1,57 @@
-const express = require('express');
+const express = require("express");
+const WebSocket = require("ws");
 const app = express();
 
 // --- Configuration ---
 const PORT = process.env.PORT || 3001;
-const GPIO_PIN_1 = parseInt(process.env.GPIO_PIN_1 || '18', 10);
-const GPIO_PIN_2 = parseInt(process.env.GPIO_PIN_2 || '23', 10);
+const MAIN_SERVER_WS_URL = process.env.MAIN_SERVER_WS_URL;
+const CHECKIN_INTERVAL_MS = 10 * 1000;
+const RECONNECT_DELAY_MS = 5 * 1000;
 
-const OPEN_POS_1 = 2200;   // ~140° in microseconds
-const CLOSED_POS_1 = 1300;  // ~80°
-const OPEN_POS_2 = 2200;
-const CLOSED_POS_2 = 1300;
+if (!MAIN_SERVER_WS_URL) {
+  console.error("Error: MAIN_SERVER_WS_URL environment variable is not set");
+  process.exit(1);
+}
+
+// GPIO pins for the three servo motors
+const GPIO_PIN_MAN = parseInt(process.env.GPIO_PIN_MAN || "18", 10);
+const GPIO_PIN_WOMAN = parseInt(process.env.GPIO_PIN_WOMAN || "23", 10);
+const GPIO_PIN_SHARED = parseInt(process.env.GPIO_PIN_SHARED || "24", 10);
+
+// Servo positions in microseconds (adjust per physical calibration)
+const OPEN_POS_MAN = 2200;
+const CLOSED_POS_MAN = 1300;
+const OPEN_POS_WOMAN = 2200;
+const CLOSED_POS_WOMAN = 1300;
+const OPEN_POS_SHARED = 2200;
+const CLOSED_POS_SHARED = 1300;
 
 const STEP_DELAY_MS = 15;
 const PAUSE_MS = 3000;
 
 // --- GPIO setup ---
 let Gpio;
-let servo1;
-let servo2;
+let servoMan;
+let servoWoman;
+let servoShared;
 
 try {
-  Gpio = require('pigpio').Gpio;
-  servo1 = new Gpio(GPIO_PIN_1, { mode: Gpio.OUTPUT });
-  servo2 = new Gpio(GPIO_PIN_2, { mode: Gpio.OUTPUT });
-  servo1.servoWrite(CLOSED_POS_1);
-  servo2.servoWrite(CLOSED_POS_2);
-  console.log(`Servos initialized on GPIO ${GPIO_PIN_1} and ${GPIO_PIN_2}`);
+  Gpio = require("pigpio").Gpio;
+  servoMan = new Gpio(GPIO_PIN_MAN, { mode: Gpio.OUTPUT });
+  servoWoman = new Gpio(GPIO_PIN_WOMAN, { mode: Gpio.OUTPUT });
+  servoShared = new Gpio(GPIO_PIN_SHARED, { mode: Gpio.OUTPUT });
+  servoMan.servoWrite(CLOSED_POS_MAN);
+  servoWoman.servoWrite(CLOSED_POS_WOMAN);
+  servoShared.servoWrite(CLOSED_POS_SHARED);
+  console.log(
+    `Servos initialized on GPIO man=${GPIO_PIN_MAN}, woman=${GPIO_PIN_WOMAN}, shared=${GPIO_PIN_SHARED}`,
+  );
 } catch (err) {
-  console.warn('pigpio not available – running in simulation mode');
+  console.warn("pigpio not available – running in simulation mode");
   console.warn(err.message);
-  servo1 = null;
-  servo2 = null;
+  servoMan = null;
+  servoWoman = null;
+  servoShared = null;
 }
 
 // --- Helpers ---
@@ -38,11 +59,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function sweep(servo, from, to) {
   if (!servo) return;
-  const step = from < to ? 1 : -1;
   const range = Math.abs(to - from);
-  const stepSize = (to - from) / range;
-  // Map degree-style increments to microsecond increments (~15µs per degree)
-  const usStep = stepSize * 15;
+  const usStep = ((to - from) / range) * 15;
   let current = from;
   for (let i = 0; i <= range; i++) {
     servo.servoWrite(Math.round(current));
@@ -54,30 +72,34 @@ async function sweep(servo, from, to) {
 
 let busy = false;
 
-async function openGiftSequence() {
+// gender: 'man' | 'woman'
+async function openGiftSequence(gender) {
   if (busy) {
-    console.log('Gift sequence already running, ignoring request');
+    console.log("Gift sequence already running, ignoring request");
     return false;
   }
   busy = true;
-  console.log('Starting gift sequence...');
+  console.log(`Starting gift sequence for: ${gender}`);
+
+  const isMan = gender === "man";
+  const servoFirst = isMan ? servoMan : servoWoman;
+  const openPosFirst = isMan ? OPEN_POS_MAN : OPEN_POS_WOMAN;
+  const closedPosFirst = isMan ? CLOSED_POS_MAN : CLOSED_POS_WOMAN;
 
   try {
-    // Open servo 1
-    await sweep(servo1, CLOSED_POS_1, OPEN_POS_1);
+    // Step 1: Open the gender-specific (1st gift) servo, then close it
+    await sweep(servoFirst, closedPosFirst, openPosFirst);
     await sleep(PAUSE_MS);
-    // Close servo 1
-    await sweep(servo1, OPEN_POS_1, CLOSED_POS_1);
-    await sleep(PAUSE_MS);
-
-    // Open servo 2
-    await sweep(servo2, CLOSED_POS_2, OPEN_POS_2);
-    await sleep(PAUSE_MS);
-    // Close servo 2
-    await sweep(servo2, OPEN_POS_2, CLOSED_POS_2);
+    await sweep(servoFirst, openPosFirst, closedPosFirst);
     await sleep(PAUSE_MS);
 
-    console.log('Gift sequence complete');
+    // Step 2: Open the shared (2nd gift) servo, then close it
+    await sweep(servoShared, CLOSED_POS_SHARED, OPEN_POS_SHARED);
+    await sleep(PAUSE_MS);
+    await sweep(servoShared, OPEN_POS_SHARED, CLOSED_POS_SHARED);
+    await sleep(PAUSE_MS);
+
+    console.log("Gift sequence complete");
   } finally {
     busy = false;
   }
@@ -85,31 +107,100 @@ async function openGiftSequence() {
 }
 
 // --- Routes ---
-app.post('/open', async (_req, res) => {
-  const started = await openGiftSequence();
-  if (started) {
-    res.json({ status: 'done' });
-  } else {
-    res.status(409).json({ status: 'busy', message: 'Gift sequence already in progress' });
-  }
-});
-
-app.get('/health', (_req, res) => {
+app.get("/health", (_req, res) => {
   res.json({
-    status: 'ok',
-    gpio: servo1 !== null,
+    status: "ok",
+    gpio: servoMan !== null,
     busy,
+    wsConnected: ws !== null && ws.readyState === WebSocket.OPEN,
   });
 });
 
-// --- Start ---
+// --- Start HTTP server (local diagnostics only) ---
 app.listen(PORT, () => {
-  console.log(`Gift server running on port ${PORT}`);
+  console.log(`Gift server local HTTP running on port ${PORT}`);
 });
 
+// --- WebSocket client: connect to main server ---
+let ws = null;
+let checkinInterval = null;
+
+function connectToMainServer() {
+  console.log(`Connecting to main server at ${MAIN_SERVER_WS_URL}...`);
+  ws = new WebSocket(MAIN_SERVER_WS_URL);
+
+  ws.on("open", () => {
+    console.log("WebSocket connected to main server");
+    sendCheckin();
+    checkinInterval = setInterval(sendCheckin, CHECKIN_INTERVAL_MS);
+  });
+
+  ws.on("message", async (raw) => {
+    let msg;
+    try {
+      msg = JSON.parse(raw.toString());
+    } catch {
+      console.warn("Received invalid JSON from main server");
+      return;
+    }
+
+    if (msg.type === "open") {
+      const { id, gender } = msg;
+      if (gender !== "man" && gender !== "woman") {
+        send({
+          type: "open_result",
+          id,
+          status: "error",
+          message: "Invalid gender",
+        });
+        return;
+      }
+      const started = await openGiftSequence(gender);
+      if (started) {
+        send({ type: "open_result", id, status: "done", gender });
+      } else {
+        send({
+          type: "open_result",
+          id,
+          status: "busy",
+          message: "Gift sequence already in progress",
+        });
+      }
+    }
+  });
+
+  ws.on("close", () => {
+    console.warn("WebSocket disconnected, reconnecting in 5s...");
+    clearInterval(checkinInterval);
+    checkinInterval = null;
+    setTimeout(connectToMainServer, RECONNECT_DELAY_MS);
+  });
+
+  ws.on("error", (err) => {
+    console.error(`WebSocket error: ${err.message}`);
+    // 'close' event fires after error, triggering reconnect
+  });
+}
+
+function send(obj) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(obj));
+  }
+}
+
+function sendCheckin() {
+  send({ type: "checkin" });
+}
+
+connectToMainServer();
+
+// Remove old HTTP /open route - commands now come through WebSocket
+
 // Graceful shutdown
-process.on('SIGINT', () => {
-  if (servo1) servo1.servoWrite(0);
-  if (servo2) servo2.servoWrite(0);
+process.on("SIGINT", () => {
+  if (servoMan) servoMan.servoWrite(0);
+  if (servoWoman) servoWoman.servoWrite(0);
+  if (servoShared) servoShared.servoWrite(0);
+  if (ws) ws.close();
   process.exit();
 });

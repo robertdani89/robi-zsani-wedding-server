@@ -1,9 +1,13 @@
 import { Controller, Post, Get, Body } from "@nestjs/common";
 import { GiftService, GiftType } from "./gift.service";
+import { ErrorReportService } from "../error-report/error-report.service";
 
 @Controller("gift")
 export class GiftController {
-  constructor(private readonly giftService: GiftService) {}
+  constructor(
+    private readonly giftService: GiftService,
+    private readonly errorReportService: ErrorReportService,
+  ) {}
 
   @Post("open")
   async openGift(@Body() body: { guestId: string; giftType: GiftType }) {
@@ -11,7 +15,18 @@ export class GiftController {
   }
 
   @Get("status")
-  async getStatus() {
+  getStatus() {
     return this.giftService.getStatus();
+  }
+
+  // Fallback endpoint — frontend tries /gift-assistance if guest-scoped route fails
+  @Post("assistance")
+  requestAssistance(@Body() body: { guestId?: string; message?: string }) {
+    const who = body?.guestId ?? "unknown guest";
+    const detail = body?.message ? ` – "${body.message}"` : "";
+    this.errorReportService.addError(
+      `Gift assistance requested by ${who}${detail}`,
+    );
+    return { status: "ok" };
   }
 }
