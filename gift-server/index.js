@@ -1,7 +1,5 @@
 require("dotenv").config();
-const express = require("express");
 const WebSocket = require("ws");
-const app = express();
 const Gpio = require('pigpio').Gpio;
 
 // --- Configuration ---
@@ -16,10 +14,13 @@ if (!MAIN_SERVER_WS_URL) {
 }
 
 // GPIO pins for the three servo motors
-const GPIO_PIN_MAN = parseInt(process.env.GPIO_PIN_MAN || "22", 10);
-const GPIO_PIN_MAN_2 = parseInt(process.env.GPIO_PIN_MAN_2 || "23", 10);
-const GPIO_PIN_WOMAN = parseInt(process.env.GPIO_PIN_WOMAN || "24", 10);
-const GPIO_PIN_WOMAN_2 = parseInt(process.env.GPIO_PIN_WOMAN_2 || "25", 10);
+const GPIO_PIN_MAN = parseInt(process.env.GPIO_PIN_MAN || "4", 10);
+const GPIO_PIN_MAN_2 = parseInt(process.env.GPIO_PIN_MAN_2 || "24", 10); // 24 ok
+const GPIO_PIN_WOMAN = parseInt(process.env.GPIO_PIN_WOMAN || "17", 10);
+const GPIO_PIN_WOMAN_2 = parseInt(process.env.GPIO_PIN_WOMAN_2 || "18", 10);
+const GPIO_PIN_IR_SENSOR_MAN = parseInt(process.env.GPIO_PIN_IR_SENSOR_MAN || "23", 10);
+const GPIO_PIN_IR_SENSOR_WOMAN = parseInt(process.env.GPIO_PIN_IR_SENSOR_WOMAN || "24", 10);
+const IR_SENSOR_POLL_MS = parseInt(process.env.IR_SENSOR_POLL_MS || "500", 10);
 
 // Servo positions in microseconds (adjust per physical calibration)
 const OPEN_POS_MAN = 2200;
@@ -33,18 +34,23 @@ const OPEN_POS_WOMAN_2 = 2200;
 const CLOSED_POS_WOMAN_2 = 1300;
 
 const STEP_DELAY_MS = 20;
-const PAUSE_MS = 3000;
+const PAUSE_MS = 2000;
 
 // --- GPIO setup ---
 let servoMan1;
-let servoWoman1;
 let servoMan2;
+let servoWoman1;
 let servoWoman2;
+let irSensorMan;
+let irSensorWoman;
+
 try {
   servoMan1 = new Gpio(GPIO_PIN_MAN, { mode: Gpio.OUTPUT });
   servoMan2 = new Gpio(GPIO_PIN_MAN_2, { mode: Gpio.OUTPUT });
   servoWoman1 = new Gpio(GPIO_PIN_WOMAN, { mode: Gpio.OUTPUT });
   servoWoman2 = new Gpio(GPIO_PIN_WOMAN_2, { mode: Gpio.OUTPUT });
+  irSensorMan = new Gpio(GPIO_PIN_IR_SENSOR_MAN, { mode: Gpio.INPUT });
+  irSensorWoman = new Gpio(GPIO_PIN_IR_SENSOR_WOMAN, { mode: Gpio.INPUT });
 
   servoMan1.servoWrite(CLOSED_POS_MAN);
   servoMan2.servoWrite(CLOSED_POS_MAN_2);
@@ -54,42 +60,32 @@ try {
     `Servos initialized on GPIO man=${GPIO_PIN_MAN}, man2=${GPIO_PIN_MAN_2}, woman=${GPIO_PIN_WOMAN},  woman2=${GPIO_PIN_WOMAN_2}`,
   );
 } catch (err) {
-  console.warn("pigpio not available – running in simulation mode");
+  console.warn("pigpio not available");
   console.warn(err.message);
-  servoMan1 = null;
-  servoWoman1 = null;
-  servoMan2 = null;
-  servoWoman2 = null;
+  process.exit(1);
 }
 
 // --- Helpers ---
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-async function sweep(servo, from, to) {
-  if (!servo) return;
-
-  const usStep = (to - from) / 15;
-  let current = from;
-  for (let i = 0; i <= 15; i++) {
-    servo.servoWrite(Math.round(current));
-    current += usStep;
-    await sleep(STEP_DELAY_MS);
-  }
-  servo.servoWrite(to);
-}
 
 let busy = false;
 
 // gender: 'man' | 'woman'
 async function openGiftSequence(gender) {
   if (busy) {
-    console.log("Gift sequence already running, ignoring request");
-    return false;
+    throw new Error("Valaki ajándékadása már fut, kérlek próbáld újra utána.");
   }
+
+  const isMan = gender === "man";
+  const irSensor = isMan ? irSensorMan : irSensorWoman;
+  const sensorValue = irSensor.digitalRead();
+  if (sensorValue === 1) {
+    throw new Error("Nincs elég ajándék a gépben, valaki már igyekszik segíteni.");
+  }
+
   busy = true;
   console.log(`Starting gift sequence for: ${gender}`);
 
-  const isMan = gender === "man";
   const servoFirst = isMan ? servoMan1 : servoWoman1;
   const servoSecond = isMan ? servoMan2 : servoWoman2;
   const openPosFirst = isMan ? OPEN_POS_MAN : OPEN_POS_WOMAN;
@@ -99,15 +95,15 @@ async function openGiftSequence(gender) {
 
   try {
     // Step 1: Open the gender-specific (1st gift) servo, then close it
-    await sweep(servoFirst, closedPosFirst, openPosFirst);
+    servoFirst.servoWrite(openPosFirst);
     await sleep(PAUSE_MS);
-    await sweep(servoFirst, openPosFirst, closedPosFirst);
+    servoFirst.servoWrite(closedPosFirst);
     await sleep(PAUSE_MS);
 
     // Step 2: Open the gender-specific (2nd gift) servo, then close it
-    await sweep(servoSecond, closedPosSecond, openPosSecond);
+    servoSecond.servoWrite(openPosSecond);
     await sleep(PAUSE_MS);
-    await sweep(servoSecond, openPosSecond, closedPosSecond);
+    servoSecond.servoWrite(closedPosSecond);
     await sleep(PAUSE_MS);
 
     console.log("Gift sequence complete");
@@ -117,27 +113,12 @@ async function openGiftSequence(gender) {
   return true;
 }
 
-// --- Routes ---
-app.get("/health", (_req, res) => {
-  res.json({
-    status: "ok",
-    gpio: servoMan1 !== null,
-    busy,
-    wsConnected: ws !== null && ws.readyState === WebSocket.OPEN,
-  });
-});
-
-// --- Start HTTP server (local diagnostics only) ---
-app.listen(PORT, () => {
-  console.log(`Gift server local HTTP running on port ${PORT}`);
-});
-
 // --- WebSocket client: connect to main server ---
 let ws = null;
 let checkinInterval = null;
 
 function connectToMainServer() {
-  console.log(`Connecting to main server at ${MAIN_SERVER_WS_URL}...`);
+  console.log(`Connecting to main server at ${MAIN_SERVER_WS_URL}`);
   ws = new WebSocket(MAIN_SERVER_WS_URL);
 
   ws.on("open", () => {
@@ -166,17 +147,20 @@ function connectToMainServer() {
         });
         return;
       }
-      const started = await openGiftSequence(gender);
-      if (started) {
-        send({ type: "open_result", id, status: "done", gender });
-      } else {
+
+      try {
+        await openGiftSequence(gender);
+      } catch (error) {
         send({
           type: "open_result",
           id,
-          status: "busy",
-          message: "Gift sequence already in progress",
+          status: "error",
+          message: error.message,
         });
+        return;
       }
+
+      send({ type: "open_result", id, status: "done", gender });
     }
   });
 
@@ -205,14 +189,43 @@ function sendCheckin() {
 
 connectToMainServer();
 
-// Remove old HTTP /open route - commands now come through WebSocket
-
 // Graceful shutdown
 process.on("SIGINT", () => {
-  if (servoMan1) servoMan1.servoWrite(0);
-  if (servoWoman1) servoWoman1.servoWrite(0);
-  if (servoMan2) servoMan2.servoWrite(0);
-  if (servoWoman2) servoWoman2.servoWrite(0);
+  if (servoMan1) servoMan1.servoWrite(CLOSED_POS_MAN);
+  if (servoMan2) servoMan2.servoWrite(CLOSED_POS_MAN_2);
+  if (servoWoman1) servoWoman1.servoWrite(CLOSED_POS_WOMAN);
+  if (servoWoman2) servoWoman2.servoWrite(CLOSED_POS_WOMAN_2);
   if (ws) ws.close();
   process.exit();
 });
+
+// (async () => {
+//   while (true) {
+// servoMan1.servoWrite(OPEN_POS_MAN);
+// await sleep(1000)
+// servoMan1.servoWrite(CLOSED_POS_MAN);
+// await sleep(1000)
+
+// servoMan2.servoWrite(OPEN_POS_MAN_2);
+// await sleep(1000)
+// servoMan2.servoWrite(CLOSED_POS_MAN_2);
+// await sleep(1000)
+
+// servoWoman1.servoWrite(OPEN_POS_WOMAN);
+// await sleep(2000)
+// servoWoman1.servoWrite(CLOSED_POS_WOMAN);
+// await sleep(5000)
+
+// servoWoman2.servoWrite(OPEN_POS_WOMAN_2);
+// await sleep(2000)
+// servoWoman2.servoWrite(CLOSED_POS_WOMAN_2);
+// await sleep(5000)
+//   }
+// })();
+
+// // --- IR sensor polling ---
+// setInterval(() => {
+//   if (!irSensor) return;
+//   const value = irSensor.digitalRead();
+//   console.log(`IR sensor (TCRT5000) GPIO ${GPIO_PIN_IR_SENSOR}: ${value} (${value === 0 ? 'detected' : 'clear'})`);
+// }, IR_SENSOR_POLL_MS);
