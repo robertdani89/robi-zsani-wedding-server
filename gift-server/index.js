@@ -20,7 +20,6 @@ const GPIO_PIN_WOMAN = parseInt(process.env.GPIO_PIN_WOMAN || "17", 10);
 const GPIO_PIN_WOMAN_2 = parseInt(process.env.GPIO_PIN_WOMAN_2 || "18", 10);
 const GPIO_PIN_IR_SENSOR_MAN = parseInt(process.env.GPIO_PIN_IR_SENSOR_MAN || "23", 10);
 const GPIO_PIN_IR_SENSOR_WOMAN = parseInt(process.env.GPIO_PIN_IR_SENSOR_WOMAN || "24", 10);
-const IR_SENSOR_POLL_MS = parseInt(process.env.IR_SENSOR_POLL_MS || "500", 10);
 
 // Servo positions in microseconds (adjust per physical calibration)
 const OPEN_POS_MAN = 2200;
