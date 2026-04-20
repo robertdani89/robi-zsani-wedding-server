@@ -10,8 +10,8 @@ export class GiftController {
   ) {}
 
   @Post("open")
-  async openGift(@Body() body: { guestId: string; giftType: GiftType }) {
-    return this.giftService.triggerOpen(body.guestId, body.giftType);
+  async openGift(@Body() body: { personId: string; giftType: GiftType }) {
+    return this.giftService.triggerOpen(body.personId, body.giftType);
   }
 
   @Get("status")
@@ -21,8 +21,8 @@ export class GiftController {
 
   // Fallback endpoint — frontend tries /gift-assistance if guest-scoped route fails
   @Post("assistance")
-  requestAssistance(@Body() body: { guestId?: string; message?: string }) {
-    const who = body?.guestId ?? "unknown guest";
+  requestAssistance(@Body() body: { personId?: string; message?: string }) {
+    const who = body?.personId ?? "unknown person";
     const detail = body?.message ? ` – "${body.message}"` : "";
     this.errorReportService.addError(
       `Gift assistance requested by ${who}${detail}`,

@@ -6,7 +6,7 @@ import {
   PrimaryGeneratedColumn,
 } from "typeorm";
 
-import { Guest } from "../guest/guest.entity";
+import { Person } from "../person/person.entity";
 import { Question } from "../question/question.entity";
 
 @Entity()
@@ -14,11 +14,11 @@ export class Answer {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @ManyToOne(() => Guest, { onDelete: "CASCADE" })
-  guest: Guest;
+  @ManyToOne(() => Person, { onDelete: "CASCADE" })
+  person: Person;
 
   @Column()
-  guestId: string;
+  personId: string;
 
   @ManyToOne(() => Question, { onDelete: "CASCADE" })
   question: Question;

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { GuestService } from "../guest/guest.service";
+import { PersonService } from "../person/person.service";
 import { GiftWsGateway } from "./gift-ws.gateway";
 
 export type GiftType = "gift_for_man" | "gift_for_ladies";
@@ -9,12 +9,12 @@ export class GiftService {
   private readonly logger = new Logger(GiftService.name);
 
   constructor(
-    private guestService: GuestService,
+    private personService: PersonService,
     private giftWsGateway: GiftWsGateway,
   ) {}
 
   async triggerOpen(
-    guestId: string,
+    personId: string,
     giftType: GiftType,
   ): Promise<{ status: string; message?: string }> {
     const gender = giftType === "gift_for_man" ? "man" : "woman";
@@ -28,7 +28,7 @@ export class GiftService {
     }
 
     this.logger.log("Gift sequence triggered successfully");
-    await this.guestService.update(guestId, {
+    await this.personService.update(personId, {
       gotGiftAt: new Date(),
       typeOfGift: giftType,
     });

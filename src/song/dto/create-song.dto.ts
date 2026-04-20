@@ -27,5 +27,5 @@ export class CreateSongDto {
 
   @IsNotEmpty()
   @IsString()
-  guestId: string;
+  personId: string;
 }

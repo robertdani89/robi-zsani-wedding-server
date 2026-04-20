@@ -36,9 +36,9 @@ export class SongController {
     return this.songService.findNextPending();
   }
 
-  @Get("guest/:guestId")
-  async findByGuest(@Param("guestId") guestId: string) {
-    return this.songService.findByGuest(guestId);
+  @Get("person/:personId")
+  async findByPerson(@Param("personId") personId: string) {
+    return this.songService.findByPerson(personId);
   }
 
   @Patch(":id/allowed")

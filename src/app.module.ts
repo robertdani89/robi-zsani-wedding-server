@@ -5,7 +5,8 @@ import { ConfigModule } from "@nestjs/config";
 import { ErrorReportModule } from "./error-report/error-report.module";
 import { GalleryModule } from "./gallery/gallery.module";
 import { GiftModule } from "./gift/gift.module";
-import { GuestModule } from "./guest/guest.module";
+import { PersonModule } from "./person/person.module";
+import { EventModule } from "./event/event.module";
 import { Module } from "@nestjs/common";
 import { PhotoModule } from "./photo/photo.module";
 import { QuestionModule } from "./question/question.module";
@@ -30,7 +31,8 @@ import { join } from "path";
       serveRoot: "/uploads",
     }),
     ErrorReportModule,
-    GuestModule,
+    PersonModule,
+    EventModule,
     PhotoModule,
     QuestionModule,
     AnswerModule,

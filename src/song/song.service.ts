@@ -7,7 +7,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { IsNull, Repository } from "typeorm";
 import { Song } from "./song.entity";
 import { CreateSongDto } from "./dto/create-song.dto";
-import { Guest } from "../guest/guest.entity";
+import { Person } from "../person/person.entity";
 
 // Spotify API types
 interface SpotifyTrack {
@@ -41,8 +41,8 @@ export class SongService {
   constructor(
     @InjectRepository(Song)
     private songRepository: Repository<Song>,
-    @InjectRepository(Guest)
-    private guestRepository: Repository<Guest>,
+    @InjectRepository(Person)
+    private personRepository: Repository<Person>,
   ) {}
 
   private async getSpotifyToken(): Promise<string> {
@@ -116,33 +116,33 @@ export class SongService {
   }
 
   async create(createSongDto: CreateSongDto): Promise<Song> {
-    const guest = await this.guestRepository.findOne({
-      where: { id: createSongDto.guestId },
+    const person = await this.personRepository.findOne({
+      where: { id: createSongDto.personId },
     });
 
-    if (!guest) {
-      throw new NotFoundException("Guest not found");
+    if (!person) {
+      throw new NotFoundException("Person not found");
     }
 
     // Create new song
     const song = this.songRepository.create({
       ...createSongDto,
-      guest,
+      person,
     });
 
     return this.songRepository.save(song);
   }
 
-  async findByGuest(guestId: string): Promise<Song | null> {
+  async findByPerson(personId: string): Promise<Song | null> {
     return this.songRepository.findOne({
-      where: { guest: { id: guestId } },
-      relations: ["guest"],
+      where: { person: { id: personId } },
+      relations: ["person"],
     });
   }
 
   async findAll(): Promise<Song[]> {
     return this.songRepository.find({
-      relations: ["guest"],
+      relations: ["person"],
       order: { createdAt: "DESC" },
     });
   }

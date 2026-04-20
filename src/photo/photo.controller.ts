@@ -39,34 +39,34 @@ export class PhotoController {
   @UseInterceptors(FileInterceptor("photo"))
   async uploadPhoto(
     @UploadedFile() file: Express.Multer.File,
-    @Body("guestId") guestId: string,
+    @Body("personId") personId: string,
   ) {
-    console.log("Upload request received, file:", file, "guestId:", guestId);
+    console.log("Upload request received, file:", file, "personId:", personId);
     if (!file) {
       throw new BadRequestException(
         "No file uploaded. Please provide an image file.",
       );
     }
-    if (!guestId) {
-      throw new BadRequestException("Guest ID is required");
+    if (!personId) {
+      throw new BadRequestException("Person ID is required");
     }
-    return this.photoService.create(file, guestId);
+    return this.photoService.create(file, personId);
   }
 
   @Post("upload-multiple")
   @UseInterceptors(FilesInterceptor("photos", 5))
   async uploadMultiplePhotos(
     @UploadedFiles() files: Express.Multer.File[],
-    @Body("guestId") guestId: string,
+    @Body("personId") personId: string,
   ) {
-    if (!guestId) {
-      throw new BadRequestException("Guest ID is required");
+    if (!personId) {
+      throw new BadRequestException("Person ID is required");
     }
     if (!files || files.length === 0) {
       throw new BadRequestException("No files uploaded");
     }
     const photos = await Promise.all(
-      files.map((file) => this.photoService.create(file, guestId)),
+      files.map((file) => this.photoService.create(file, personId)),
     );
     return photos;
   }
@@ -76,9 +76,9 @@ export class PhotoController {
     return this.photoService.findAll();
   }
 
-  @Get("guest/:guestId")
-  findByGuest(@Param("guestId") guestId: string) {
-    return this.photoService.findByGuest(guestId);
+  @Get("person/:personId")
+  findByPerson(@Param("personId") personId: string) {
+    return this.photoService.findByPerson(personId);
   }
 
   @Get("collections")

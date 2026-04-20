@@ -12,10 +12,10 @@ export class AnswerService {
   ) {}
 
   async create(createAnswerDto: CreateAnswerDto): Promise<Answer> {
-    // Check if answer already exists for this guest and question
+    // Check if answer already exists for this person and question
     const existing = await this.answerRepository.findOne({
       where: {
-        guestId: createAnswerDto.guestId,
+        personId: createAnswerDto.personId,
         questionId: createAnswerDto.questionId,
       },
     });
@@ -32,12 +32,12 @@ export class AnswerService {
   }
 
   async findAll(): Promise<Answer[]> {
-    return this.answerRepository.find({ relations: ["guest", "question"] });
+    return this.answerRepository.find({ relations: ["person", "question"] });
   }
 
-  async findByGuest(guestId: string): Promise<Answer[]> {
+  async findByPerson(personId: string): Promise<Answer[]> {
     return this.answerRepository.find({
-      where: { guestId },
+      where: { personId },
       relations: ["question"],
     });
   }
@@ -45,7 +45,7 @@ export class AnswerService {
   async findOne(id: string): Promise<Answer> {
     return this.answerRepository.findOne({
       where: { id },
-      relations: ["guest", "question"],
+      relations: ["person", "question"],
     });
   }
 

@@ -9,60 +9,72 @@ import {
   Delete,
   Query,
 } from "@nestjs/common";
-import { GuestService } from "./guest.service";
-import { CreateGuestDto } from "./dto/create-guest.dto";
-import { UpdateGuestDto } from "./dto/update-guest.dto";
+import { PersonService } from "./person.service";
+import { CreatePersonDto } from "./dto/create-person.dto";
+import { UpdatePersonDto } from "./dto/update-person.dto";
+import { PersonRole } from "./person.entity";
 import { ErrorReportService } from "../error-report/error-report.service";
 
-@Controller("guests")
-export class GuestController {
+@Controller("persons")
+export class PersonController {
   constructor(
-    private readonly guestService: GuestService,
+    private readonly personService: PersonService,
     private readonly errorReportService: ErrorReportService,
   ) {}
 
   @Post()
-  create(@Body() createGuestDto: CreateGuestDto) {
-    return this.guestService.create(createGuestDto);
+  create(@Body() createPersonDto: CreatePersonDto) {
+    return this.personService.create(createPersonDto);
   }
 
   @Post("register")
   register(
-    @Body() body: { name: string },
+    @Body()
+    body: {
+      name: string;
+      eventCode: string;
+      role?: PersonRole;
+    },
     @Query("questionCount") questionCount?: string,
   ) {
     const count = questionCount ? parseInt(questionCount, 10) : 8;
-    return this.guestService.registerWithQuestions(body.name, count);
+    const role = body.role ?? PersonRole.GUEST;
+    return this.personService.registerWithQuestions(
+      body.name,
+      body.eventCode,
+      role,
+      count,
+    );
   }
 
   @Get()
   findAll() {
-    return this.guestService.findAll();
+    return this.personService.findAll();
   }
 
   @Get(":id")
   findOne(@Param("id") id: string) {
-    return this.guestService.findOne(id);
+    return this.personService.findOne(id);
   }
 
   @Get(":id/questions")
   getAssignedQuestions(@Param("id") id: string) {
-    return this.guestService.getAssignedQuestions(id);
+    return this.personService.getAssignedQuestions(id);
   }
 
   @Patch(":id")
-  update(@Param("id") id: string, @Body() updateGuestDto: UpdateGuestDto) {
-    return this.guestService.update(id, updateGuestDto);
+  update(@Param("id") id: string, @Body() updatePersonDto: UpdatePersonDto) {
+    return this.personService.update(id, updatePersonDto);
   }
 
   @Put(":id")
-  replace(@Param("id") id: string, @Body() updateGuestDto: UpdateGuestDto) {
-    return this.guestService.update(id, updateGuestDto);
+  replace(@Param("id") id: string, @Body() updatePersonDto: UpdatePersonDto) {
+    return this.personService.update(id, updatePersonDto);
   }
 
   @Delete(":id")
   remove(@Param("id") id: string) {
-    return this.guestService.remove(id);
+    return this.personService.remove(id);
   }
 
   @Post(":id/gift-assistance")
@@ -70,8 +82,8 @@ export class GuestController {
     @Param("id") id: string,
     @Body() body: { message?: string },
   ) {
-    const guest = await this.guestService.findOne(id).catch(() => null);
-    const name = guest?.name ?? id;
+    const person = await this.personService.findOne(id).catch(() => null);
+    const name = person?.name ?? id;
     const detail = body?.message ? ` – "${body.message}"` : "";
     this.errorReportService.addError(
       `Gift assistance requested by ${name}${detail}`,

@@ -1,4 +1,4 @@
-import { Controller, Get } from "@nestjs/common";
+import { Controller, Get, Query } from "@nestjs/common";
 
 import { AdminService } from "./admin.service";
 
@@ -7,7 +7,7 @@ export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Get("guests")
-  getAllGuestsWithStats() {
-    return this.adminService.getAllGuestsWithStats();
+  getAllPersonsWithStats(@Query("eventId") eventId?: string) {
+    return this.adminService.getAllPersonsWithStats(eventId);
   }
 }

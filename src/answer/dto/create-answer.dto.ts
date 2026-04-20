@@ -1,5 +1,5 @@
 export class CreateAnswerDto {
-  guestId: string;
+  personId: string;
   questionId: string;
   value: string | string[];
 }

@@ -29,13 +29,13 @@ export class PhotoService {
     }
   }
 
-  async create(file: Express.Multer.File, guestId: string): Promise<Photo> {
+  async create(file: Express.Multer.File, personId: string): Promise<Photo> {
     const photo = this.photoRepository.create({
       filename: file.filename,
       path: file.path,
       mimetype: file.mimetype,
       size: file.size,
-      guestId,
+      personId,
     });
 
     const savedPhoto = await this.photoRepository.save(photo);
@@ -76,17 +76,17 @@ export class PhotoService {
   }
 
   async findAll(): Promise<Photo[]> {
-    return this.photoRepository.find({ relations: ["guest"] });
+    return this.photoRepository.find({ relations: ["person"] });
   }
 
-  async findByGuest(guestId: string): Promise<Photo[]> {
-    return this.photoRepository.find({ where: { guestId } });
+  async findByPerson(personId: string): Promise<Photo[]> {
+    return this.photoRepository.find({ where: { personId } });
   }
 
   async findOne(id: string): Promise<Photo> {
     return this.photoRepository.findOne({
       where: { id },
-      relations: ["guest"],
+      relations: ["person"],
     });
   }
 

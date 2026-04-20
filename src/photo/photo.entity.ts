@@ -6,7 +6,7 @@ import {
   PrimaryGeneratedColumn,
 } from "typeorm";
 
-import { Guest } from "../guest/guest.entity";
+import { Person } from "../person/person.entity";
 
 @Entity()
 export class Photo {
@@ -25,11 +25,11 @@ export class Photo {
   @Column()
   size: number;
 
-  @ManyToOne(() => Guest, { onDelete: "CASCADE" })
-  guest: Guest;
+  @ManyToOne(() => Person, { onDelete: "CASCADE" })
+  person: Person;
 
   @Column()
-  guestId: string;
+  personId: string;
 
   @CreateDateColumn()
   createdAt: Date;

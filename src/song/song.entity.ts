@@ -6,7 +6,7 @@ import {
   PrimaryGeneratedColumn,
 } from "typeorm";
 
-import { Guest } from "../guest/guest.entity";
+import { Person } from "../person/person.entity";
 
 @Entity()
 export class Song {
@@ -31,8 +31,8 @@ export class Song {
   @Column({ nullable: true })
   previewUrl: string;
 
-  @ManyToOne(() => Guest, { onDelete: "CASCADE" })
-  guest: Guest;
+  @ManyToOne(() => Person, { onDelete: "CASCADE" })
+  person: Person;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Delete,
-} from "@nestjs/common";
+import { Controller, Get, Post, Body, Param, Delete } from "@nestjs/common";
 import { AnswerService } from "./answer.service";
 import { CreateAnswerDto } from "./dto/create-answer.dto";
 
@@ -23,9 +16,9 @@ export class AnswerController {
     return this.answerService.findAll();
   }
 
-  @Get("guest/:guestId")
-  findByGuest(@Param("guestId") guestId: string) {
-    return this.answerService.findByGuest(guestId);
+  @Get("person/:personId")
+  findByPerson(@Param("personId") personId: string) {
+    return this.answerService.findByPerson(personId);
   }
 
   @Get(":id")
