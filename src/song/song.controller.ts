@@ -32,8 +32,8 @@ export class SongController {
   }
 
   @Get("next-pending")
-  async findNextPending() {
-    return this.songService.findNextPending();
+  async findNextPending(@Query("eventId") eventId: string) {
+    return this.songService.findNextPending(eventId);
   }
 
   @Get("persons/:personId")

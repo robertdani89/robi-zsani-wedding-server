@@ -147,7 +147,7 @@ export class SongService {
     });
   }
 
-  async findNextPending(): Promise<{
+  async findNextPending(eventId: string): Promise<{
     id: string;
     spotifyId: string;
     name: string;
@@ -158,7 +158,8 @@ export class SongService {
     createdAt: Date;
   } | null> {
     const song = await this.songRepository.findOne({
-      where: { allowed: IsNull() },
+      where: { allowed: IsNull(), person: { eventId } },
+      relations: ["person"],
       order: { createdAt: "ASC" },
     });
 
