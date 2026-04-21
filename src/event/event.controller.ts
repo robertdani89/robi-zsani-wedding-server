@@ -50,14 +50,6 @@ export class EventController {
     return this.eventService.update(id, updateEventDto);
   }
 
-  @Patch("code/:code")
-  updateByCode(
-    @Param("code") code: string,
-    @Body() updateEventDto: UpdateEventDto,
-  ) {
-    return this.eventService.updateByCode(code, updateEventDto);
-  }
-
   @Patch("code/:code/questions")
   updateQuestions(
     @Param("code") code: string,

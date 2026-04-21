@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { Person } from "../person/person.entity";
+import { In, Repository } from "typeorm";
+import { Person, PersonRole } from "../person/person.entity";
 import { Answer } from "../answer/answer.entity";
 import { Photo } from "../photo/photo.entity";
 import { Song } from "../song/song.entity";
@@ -19,8 +19,15 @@ export class AdminService {
     private songRepository: Repository<Song>,
   ) {}
 
-  async getAllPersonsWithStats(eventId?: string) {
-    const where = eventId ? { eventId } : {};
+  async getAllPersonsWithStats(eventId: string) {
+    if (!eventId) {
+      throw new Error("Event ID is required");
+    }
+
+    const where = {
+      eventId,
+      role: In([PersonRole.ASSISTANT, PersonRole.GUEST]),
+    };
     const persons = await this.personRepository.find({
       where,
       order: { createdAt: "DESC" },

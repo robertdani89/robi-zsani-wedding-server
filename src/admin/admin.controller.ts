@@ -7,7 +7,10 @@ export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Get("guests")
-  getAllPersonsWithStats(@Query("eventId") eventId?: string) {
+  getAllPersonsWithStats(@Query("eventId") eventId: string) {
+    if (!eventId) {
+      throw new Error("Event ID is required");
+    }
     return this.adminService.getAllPersonsWithStats(eventId);
   }
 }

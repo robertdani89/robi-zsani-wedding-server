@@ -1,18 +1,6 @@
-import { QuestionType } from "./question.entity";
+import { QuestionType, type EventQuestion } from "./event.entity";
 
-export interface LocalizedText {
-  en: string;
-  hu: string;
-}
-
-export interface QuestionDefinition {
-  id: string;
-  text: LocalizedText;
-  type: QuestionType;
-  options?: LocalizedText[];
-}
-
-export const QUESTION_DEFINITIONS: QuestionDefinition[] = [
+export const QUESTION_DEFINITIONS: EventQuestion[] = [
   {
     id: "q1",
     text: {

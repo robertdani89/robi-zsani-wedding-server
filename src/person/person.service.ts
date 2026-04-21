@@ -39,7 +39,7 @@ export class PersonService {
     name: string,
     eventCode: string,
     role: PersonRole = PersonRole.GUEST,
-    questionCount: number = 8,
+    questionCount: number = 4,
   ): Promise<{ person: Person; questions: any[] }> {
     const event = await this.eventRepository.findOne({
       where: { code: eventCode },

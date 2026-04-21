@@ -7,7 +7,6 @@ import {
 } from "typeorm";
 
 import { Person } from "../person/person.entity";
-import { Question } from "../question/question.entity";
 
 @Entity()
 export class Answer {
@@ -19,9 +18,6 @@ export class Answer {
 
   @Column()
   personId: string;
-
-  @ManyToOne(() => Question, { onDelete: "CASCADE" })
-  question: Question;
 
   @Column()
   questionId: string;

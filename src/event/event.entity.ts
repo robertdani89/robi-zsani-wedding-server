@@ -2,12 +2,19 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  OneToMany,
   PrimaryGeneratedColumn,
 } from "typeorm";
 
-import type { LocalizedText } from "../question/questions";
-import { QuestionType } from "../question/question.entity";
+export interface LocalizedText {
+  en: string;
+  hu: string;
+}
+
+export enum QuestionType {
+  SINGLE_CHOICE = "single_choice",
+  MULTIPLE_CHOICE = "multiple_choice",
+  FREE_TEXT = "free_text",
+}
 
 export interface EventQuestion {
   id: string;
@@ -27,11 +34,8 @@ export class Event {
   @Column()
   name: string;
 
-  @Column({ nullable: true })
-  date: string;
-
-  @Column({ nullable: true })
-  organizerName: string;
+  @Column("integer", { nullable: true })
+  date: number;
 
   @Column("simple-json", { nullable: true })
   questions: EventQuestion[];
