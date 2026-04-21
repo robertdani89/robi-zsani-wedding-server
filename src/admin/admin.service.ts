@@ -42,7 +42,7 @@ export class AdminService {
         const photoCount = await this.photoRepository.count({
           where: { personId: person.id },
         });
-        const song = await this.songRepository.findOne({
+        const songCount = await this.songRepository.count({
           where: { person: { id: person.id } },
         });
 
@@ -55,8 +55,7 @@ export class AdminService {
           createdAt: person.createdAt,
           answerCount,
           photoCount,
-          hasSong: !!song,
-          songName: song?.name || null,
+          songCount,
         };
       }),
     );
