@@ -133,8 +133,8 @@ export class SongService {
     return this.songRepository.save(song);
   }
 
-  async findByPerson(personId: string): Promise<Song | null> {
-    return this.songRepository.findOne({
+  async findByPerson(personId: string): Promise<Song[] | null> {
+    return this.songRepository.find({
       where: { person: { id: personId } },
       relations: ["person"],
     });

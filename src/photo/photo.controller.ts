@@ -76,7 +76,7 @@ export class PhotoController {
     return this.photoService.findAll();
   }
 
-  @Get("person/:personId")
+  @Get("persons/:personId")
   findByPerson(@Param("personId") personId: string) {
     return this.photoService.findByPerson(personId);
   }

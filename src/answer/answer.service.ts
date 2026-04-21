@@ -38,14 +38,13 @@ export class AnswerService {
   async findByPerson(personId: string): Promise<Answer[]> {
     return this.answerRepository.find({
       where: { personId },
-      relations: ["question"],
     });
   }
 
   async findOne(id: string): Promise<Answer> {
     return this.answerRepository.findOne({
       where: { id },
-      relations: ["person", "question"],
+      relations: ["person"],
     });
   }
 

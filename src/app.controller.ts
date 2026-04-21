@@ -20,8 +20,10 @@ export class AppController {
 
   // Frontend fallback: POST /gift-assistance
   @Post("gift-assistance")
-  giftAssistanceFallback(@Body() body: { guestId?: string; message?: string }) {
-    const who = body?.guestId ?? "unknown guest";
+  giftAssistanceFallback(
+    @Body() body: { personId?: string; message?: string },
+  ) {
+    const who = body?.personId ?? "unknown guest";
     const detail = body?.message ? ` – "${body.message}"` : "";
     this.errorReportService.addError(
       `Gift assistance requested by ${who}${detail}`,
@@ -32,9 +34,9 @@ export class AppController {
   // Frontend fallback: POST /assistance-requests
   @Post("assistance-requests")
   assistanceRequestsFallback(
-    @Body() body: { guestId?: string; message?: string },
+    @Body() body: { personId?: string; message?: string },
   ) {
-    const who = body?.guestId ?? "unknown guest";
+    const who = body?.personId ?? "unknown guest";
     const detail = body?.message ? ` – "${body.message}"` : "";
     this.errorReportService.addError(
       `Gift assistance requested by ${who}${detail}`,

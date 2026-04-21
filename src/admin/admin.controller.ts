@@ -6,7 +6,7 @@ import { AdminService } from "./admin.service";
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  @Get("guests")
+  @Get("person")
   getAllPersonsWithStats(@Query("eventId") eventId: string) {
     if (!eventId) {
       throw new Error("Event ID is required");

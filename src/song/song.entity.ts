@@ -34,6 +34,9 @@ export class Song {
   @ManyToOne(() => Person, { onDelete: "CASCADE" })
   person: Person;
 
+  @Column()
+  personId: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

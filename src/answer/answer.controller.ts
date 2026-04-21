@@ -16,7 +16,7 @@ export class AnswerController {
     return this.answerService.findAll();
   }
 
-  @Get("person/:personId")
+  @Get("persons/:personId")
   findByPerson(@Param("personId") personId: string) {
     return this.answerService.findByPerson(personId);
   }
