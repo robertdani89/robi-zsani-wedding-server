@@ -19,21 +19,75 @@ const GPIO_PIN_MAN_2 = parseInt(process.env.GPIO_PIN_MAN_2 || "24", 10); // 24 o
 const GPIO_PIN_WOMAN = parseInt(process.env.GPIO_PIN_WOMAN || "17", 10);
 const GPIO_PIN_WOMAN_2 = parseInt(process.env.GPIO_PIN_WOMAN_2 || "18", 10);
 const GPIO_PIN_IR_SENSOR_MAN = parseInt(process.env.GPIO_PIN_IR_SENSOR_MAN || "23", 10);
-const GPIO_PIN_IR_SENSOR_WOMAN = parseInt(process.env.GPIO_PIN_IR_SENSOR_WOMAN || "24", 10);
+const GPIO_PIN_IR_SENSOR_WOMAN = parseInt(process.env.GPIO_PIN_IR_SENSOR_WOMAN || "25", 10);
+const IR_SENSOR_POLL_MS = parseInt(process.env.IR_SENSOR_POLL_MS || "500", 10);
 
-// Servo positions in microseconds (adjust per physical calibration)
-const OPEN_POS_MAN = 2200;
-const CLOSED_POS_MAN = 1300;
-const OPEN_POS_MAN_2 = 2200;
-const CLOSED_POS_MAN_2 = 1300;
+// Standard positional servo endpoints in microseconds.
+const OPEN_POS_MAN = parseInt(process.env.OPEN_POS_MAN || "1300", 10);
+const CLOSED_POS_MAN = parseInt(process.env.CLOSED_POS_MAN || "2200", 10);
+const OPEN_POS_WOMAN = parseInt(process.env.OPEN_POS_WOMAN || "2200", 10);
+const CLOSED_POS_WOMAN = parseInt(process.env.CLOSED_POS_WOMAN || "1300", 10);
 
-const OPEN_POS_WOMAN = 2200;
-const CLOSED_POS_WOMAN = 1300;
-const OPEN_POS_WOMAN_2 = 2200;
-const CLOSED_POS_WOMAN_2 = 1300;
+// Continuous-rotation servos use direction pulses around a neutral stop pulse.
+const CR_NEUTRAL_US = parseInt(process.env.CR_NEUTRAL_US || "1500", 10);
+const CR_MAN_2_OPEN_US = parseInt(process.env.CR_MAN_2_OPEN_US || "1700", 10);
+const CR_MAN_2_CLOSE_US = parseInt(process.env.CR_MAN_2_CLOSE_US || "1300", 10);
+const CR_WOMAN_2_OPEN_US = parseInt(process.env.CR_WOMAN_2_OPEN_US || "1300", 10);
+const CR_WOMAN_2_CLOSE_US = parseInt(process.env.CR_WOMAN_2_CLOSE_US || "1700", 10);
 
-const STEP_DELAY_MS = 20;
-const PAUSE_MS = 2000;
+const OPEN_RUN_MS = 800;
+const CLOSE_RUN_MS = 800;
+
+const SERVO_SETTLE_MS = parseInt(process.env.SERVO_SETTLE_MS || "700", 10);
+const PAUSE_MS = parseInt(process.env.PAUSE_MS || "2000", 10);
+
+function validateUniquePins() {
+  const configuredPins = [
+    ["GPIO_PIN_MAN", GPIO_PIN_MAN],
+    ["GPIO_PIN_MAN_2", GPIO_PIN_MAN_2],
+    ["GPIO_PIN_WOMAN", GPIO_PIN_WOMAN],
+    ["GPIO_PIN_WOMAN_2", GPIO_PIN_WOMAN_2],
+    ["GPIO_PIN_IR_SENSOR_MAN", GPIO_PIN_IR_SENSOR_MAN],
+    ["GPIO_PIN_IR_SENSOR_WOMAN", GPIO_PIN_IR_SENSOR_WOMAN],
+  ];
+  const usedPins = new Map();
+
+  for (const [name, pin] of configuredPins) {
+    const existing = usedPins.get(pin);
+    if (existing) {
+      throw new Error(`GPIO pin conflict: ${name} and ${existing} are both set to ${pin}`);
+    }
+    usedPins.set(pin, name);
+  }
+}
+
+function stopServo(servo) {
+  servo.servoWrite(0);
+}
+
+// --- Helpers ---
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function moveServo(servo, positionUs) {
+  servo.servoWrite(positionUs);
+  await sleep(SERVO_SETTLE_MS);
+  stopServo(servo);
+}
+
+async function runContinuousServo(servo, pulseWidth, durationMs) {
+  servo.servoWrite(pulseWidth);
+  await sleep(durationMs);
+  servo.servoWrite(CR_NEUTRAL_US);
+  await sleep(100);
+  stopServo(servo);
+}
+
+function stopAllServos() {
+  if (servoMan1) stopServo(servoMan1);
+  if (servoMan2) stopServo(servoMan2);
+  if (servoWoman1) stopServo(servoWoman1);
+  if (servoWoman2) stopServo(servoWoman2);
+}
 
 // --- GPIO setup ---
 let servoMan1;
@@ -44,6 +98,8 @@ let irSensorMan;
 let irSensorWoman;
 
 try {
+  validateUniquePins();
+
   servoMan1 = new Gpio(GPIO_PIN_MAN, { mode: Gpio.OUTPUT });
   servoMan2 = new Gpio(GPIO_PIN_MAN_2, { mode: Gpio.OUTPUT });
   servoWoman1 = new Gpio(GPIO_PIN_WOMAN, { mode: Gpio.OUTPUT });
@@ -52,25 +108,24 @@ try {
   irSensorWoman = new Gpio(GPIO_PIN_IR_SENSOR_WOMAN, { mode: Gpio.INPUT });
 
   servoMan1.servoWrite(CLOSED_POS_MAN);
-  servoMan2.servoWrite(CLOSED_POS_MAN_2);
+  servoMan2.servoWrite(CR_NEUTRAL_US);
+  runContinuousServo(servoMan2, CR_MAN_2_CLOSE_US, 500);
   servoWoman1.servoWrite(CLOSED_POS_WOMAN);
-  servoWoman2.servoWrite(CLOSED_POS_WOMAN_2);
+  servoWoman2.servoWrite(CR_NEUTRAL_US);
   console.log(
     `Servos initialized on GPIO man=${GPIO_PIN_MAN}, man2=${GPIO_PIN_MAN_2}, woman=${GPIO_PIN_WOMAN},  woman2=${GPIO_PIN_WOMAN_2}`,
   );
+  setTimeout(stopAllServos, SERVO_SETTLE_MS);
 } catch (err) {
   console.warn("pigpio not available");
   console.warn(err.message);
   process.exit(1);
 }
 
-// --- Helpers ---
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
 let busy = false;
 
 // gender: 'man' | 'woman'
-async function openGiftSequence(gender) {
+async function openGiftSequence(gender, force = false) {
   if (busy) {
     throw new Error("Valaki ajándékadása már fut, kérlek próbáld újra utána.");
   }
@@ -78,7 +133,7 @@ async function openGiftSequence(gender) {
   const isMan = gender === "man";
   const irSensor = isMan ? irSensorMan : irSensorWoman;
   const sensorValue = irSensor.digitalRead();
-  if (sensorValue === 1) {
+  if (!force && sensorValue === 1) {
     throw new Error("Nincs elég ajándék a gépben, valaki már igyekszik segíteni.");
   }
 
@@ -89,23 +144,33 @@ async function openGiftSequence(gender) {
   const servoSecond = isMan ? servoMan2 : servoWoman2;
   const openPosFirst = isMan ? OPEN_POS_MAN : OPEN_POS_WOMAN;
   const closedPosFirst = isMan ? CLOSED_POS_MAN : CLOSED_POS_WOMAN;
-  const openPosSecond = isMan ? OPEN_POS_MAN_2 : OPEN_POS_WOMAN_2;
-  const closedPosSecond = isMan ? CLOSED_POS_MAN_2 : CLOSED_POS_WOMAN_2;
+  const openPulseSecond = isMan ? CR_MAN_2_OPEN_US : CR_WOMAN_2_OPEN_US;
+  const closePulseSecond = isMan ? CR_MAN_2_CLOSE_US : CR_WOMAN_2_CLOSE_US;
 
   try {
-    // Step 1: Open the gender-specific (1st gift) servo, then close it
-    servoFirst.servoWrite(openPosFirst);
+    await runContinuousServo(servoSecond, openPulseSecond, OPEN_RUN_MS);
     await sleep(PAUSE_MS);
-    servoFirst.servoWrite(closedPosFirst);
+    await runContinuousServo(servoSecond, closePulseSecond, CLOSE_RUN_MS);
     await sleep(PAUSE_MS);
-
-    // Step 2: Open the gender-specific (2nd gift) servo, then close it
-    servoSecond.servoWrite(openPosSecond);
+    
+    await moveServo(servoFirst, openPosFirst);
     await sleep(PAUSE_MS);
-    servoSecond.servoWrite(closedPosSecond);
+    await moveServo(servoFirst, closedPosFirst);
     await sleep(PAUSE_MS);
 
     console.log("Gift sequence complete");
+
+    // Check if gift was actually dispensed
+    await sleep(500); // Wait a bit for gift to settle
+    const finalSensorValue = irSensor.digitalRead();
+    if (finalSensorValue === 1) {
+      // No gift detected after dispensing
+      send({
+        type: "no_gift_detected",
+        gender,
+        message: `No gift detected in ${gender} dispenser after sequence`,
+      });
+    }
   } finally {
     busy = false;
   }
@@ -136,7 +201,7 @@ function connectToMainServer() {
     }
 
     if (msg.type === "open") {
-      const { id, gender } = msg;
+      const { id, gender, force } = msg;
       if (gender !== "man" && gender !== "woman") {
         send({
           type: "open_result",
@@ -148,7 +213,7 @@ function connectToMainServer() {
       }
 
       try {
-        await openGiftSequence(gender);
+        await openGiftSequence(gender, Boolean(force));
       } catch (error) {
         send({
           type: "open_result",
@@ -179,48 +244,21 @@ function connectToMainServer() {
 function send(obj) {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(obj));
-  }
+  } 
 }
 
 function sendCheckin() {
   send({ type: "checkin" });
 }
 
-connectToMainServer();
+// connectToMainServer();
 
 // Graceful shutdown
 process.on("SIGINT", () => {
-  if (servoMan1) servoMan1.servoWrite(CLOSED_POS_MAN);
-  if (servoMan2) servoMan2.servoWrite(CLOSED_POS_MAN_2);
-  if (servoWoman1) servoWoman1.servoWrite(CLOSED_POS_WOMAN);
-  if (servoWoman2) servoWoman2.servoWrite(CLOSED_POS_WOMAN_2);
+  stopAllServos();
   if (ws) ws.close();
   process.exit();
 });
-
-// (async () => {
-//   while (true) {
-// servoMan1.servoWrite(OPEN_POS_MAN);
-// await sleep(1000)
-// servoMan1.servoWrite(CLOSED_POS_MAN);
-// await sleep(1000)
-
-// servoMan2.servoWrite(OPEN_POS_MAN_2);
-// await sleep(1000)
-// servoMan2.servoWrite(CLOSED_POS_MAN_2);
-// await sleep(1000)
-
-// servoWoman1.servoWrite(OPEN_POS_WOMAN);
-// await sleep(2000)
-// servoWoman1.servoWrite(CLOSED_POS_WOMAN);
-// await sleep(5000)
-
-// servoWoman2.servoWrite(OPEN_POS_WOMAN_2);
-// await sleep(2000)
-// servoWoman2.servoWrite(CLOSED_POS_WOMAN_2);
-// await sleep(5000)
-//   }
-// })();
 
 // // --- IR sensor polling ---
 // setInterval(() => {
@@ -228,3 +266,27 @@ process.on("SIGINT", () => {
 //   const value = irSensor.digitalRead();
 //   console.log(`IR sensor (TCRT5000) GPIO ${GPIO_PIN_IR_SENSOR}: ${value} (${value === 0 ? 'detected' : 'clear'})`);
 // }, IR_SENSOR_POLL_MS);
+
+// (async () => {
+//   while (true) {
+//     await runContinuousServo(servoMan2, CR_MAN_2_OPEN_US, OPEN_RUN_MS);
+//     await sleep(2000);
+//     await runContinuousServo(servoMan2, CR_MAN_2_CLOSE_US, CLOSE_RUN_MS);
+//     await sleep(2000);
+
+//     await moveServo(servoMan1, OPEN_POS_MAN);
+//     await sleep(2000);
+//     await moveServo(servoMan1, CLOSED_POS_MAN);
+//     await sleep(2000);
+
+//     await runContinuousServo(servoWoman2, CR_WOMAN_2_OPEN_US, OPEN_RUN_MS);
+//     await sleep(2000);
+//     await runContinuousServo(servoWoman2, CR_WOMAN_2_CLOSE_US, CLOSE_RUN_MS);
+//     await sleep(2000);
+
+//     await moveServo(servoWoman1, OPEN_POS_WOMAN);
+//     await sleep(2000);
+//     await moveServo(servoWoman1, CLOSED_POS_WOMAN);
+//     await sleep(2000);
+//   }
+// })();

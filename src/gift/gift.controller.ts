@@ -10,8 +10,24 @@ export class GiftController {
   ) {}
 
   @Post("open")
-  async openGift(@Body() body: { personId: string; giftType: GiftType }) {
-    return this.giftService.triggerOpen(body.personId, body.giftType);
+  async openGift(
+    @Body()
+    body: {
+      personId: string;
+      giftType: GiftType;
+      childGiftType?: GiftType;
+    },
+  ) {
+    return this.giftService.triggerOpen(
+      body.personId,
+      body.giftType,
+      body.childGiftType,
+    );
+  }
+
+  @Post("manual-open")
+  async openManualGift(@Body() body: { giftType: GiftType }) {
+    return this.giftService.triggerManualOpen(body.giftType);
   }
 
   @Get("status")

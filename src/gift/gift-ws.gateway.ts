@@ -55,6 +55,13 @@ export class GiftWsGateway implements OnGatewayConnection, OnGatewayDisconnect {
           break;
         }
 
+        case "no_gift_detected": {
+          const errorMsg = msg.message || `No gift detected in ${msg.gender} dispenser`;
+          this.errorReportService.addError(errorMsg);
+          this.logger.error(errorMsg);
+          break;
+        }
+
         default:
           this.logger.warn(`Unknown message type: ${msg.type}`);
       }
@@ -70,6 +77,7 @@ export class GiftWsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   async sendOpen(
     gender: "man" | "woman",
+    force: boolean = false,
   ): Promise<{ status: string; message?: string }> {
     if (!this.giftSocket || !this.isConnected()) {
       return { status: "error", message: "Gift server not connected" };
@@ -88,7 +96,7 @@ export class GiftWsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         resolve({ status: result.status, message: result.message });
       });
 
-      this.giftSocket!.send(JSON.stringify({ type: "open", id, gender }));
+      this.giftSocket!.send(JSON.stringify({ type: "open", id, gender, force }));
     });
   }
 

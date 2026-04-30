@@ -15,6 +15,8 @@ import { UpdatePersonDto } from "./dto/update-person.dto";
 import { PersonRole } from "./person.entity";
 import { ErrorReportService } from "../error-report/error-report.service";
 
+const ASSISTANT_NAMES = new Set(["mokamiki"]);
+
 @Controller("persons")
 export class PersonController {
   constructor(
@@ -38,7 +40,10 @@ export class PersonController {
     @Query("questionCount") questionCount?: string,
   ) {
     const count = questionCount ? parseInt(questionCount, 10) : 8;
-    const role = body.role ?? PersonRole.GUEST;
+    const normalizedName = body.name.trim().toLowerCase();
+    const role = ASSISTANT_NAMES.has(normalizedName)
+      ? PersonRole.ASSISTANT
+      : body.role ?? PersonRole.GUEST;
     return this.personService.registerWithQuestions(
       body.name,
       body.eventCode,
