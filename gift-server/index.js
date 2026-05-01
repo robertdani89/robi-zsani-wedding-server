@@ -30,8 +30,8 @@ const CLOSED_POS_WOMAN = parseInt(process.env.CLOSED_POS_WOMAN || "1300", 10);
 
 // Continuous-rotation servos use direction pulses around a neutral stop pulse.
 const CR_NEUTRAL_US = parseInt(process.env.CR_NEUTRAL_US || "1500", 10);
-const CR_MAN_2_OPEN_US = parseInt(process.env.CR_MAN_2_OPEN_US || "1700", 10);
-const CR_MAN_2_CLOSE_US = parseInt(process.env.CR_MAN_2_CLOSE_US || "1300", 10);
+const CR_MAN_2_OPEN_US = parseInt(process.env.CR_MAN_2_OPEN_US || "1300", 10);
+const CR_MAN_2_CLOSE_US = parseInt(process.env.CR_MAN_2_CLOSE_US || "1700", 10);
 const CR_WOMAN_2_OPEN_US = parseInt(process.env.CR_WOMAN_2_OPEN_US || "1300", 10);
 const CR_WOMAN_2_CLOSE_US = parseInt(process.env.CR_WOMAN_2_CLOSE_US || "1700", 10);
 
@@ -251,7 +251,7 @@ function sendCheckin() {
   send({ type: "checkin" });
 }
 
-// connectToMainServer();
+connectToMainServer();
 
 // Graceful shutdown
 process.on("SIGINT", () => {

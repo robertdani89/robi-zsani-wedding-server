@@ -124,10 +124,15 @@ export class SongService {
       throw new NotFoundException("Person not found");
     }
 
+    const songsByPersonCount = await this.songRepository.count({
+      where: { person: { id: createSongDto.personId } },
+    });
+
     // Create new song
     const song = this.songRepository.create({
       ...createSongDto,
       person,
+      order: songsByPersonCount + 1,
     });
 
     return this.songRepository.save(song);
@@ -137,6 +142,7 @@ export class SongService {
     return this.songRepository.find({
       where: { person: { id: personId } },
       relations: ["person"],
+      order: { order: "ASC" },
     });
   }
 
@@ -160,7 +166,7 @@ export class SongService {
     const song = await this.songRepository.findOne({
       where: { allowed: IsNull(), person: { eventId } },
       relations: ["person"],
-      order: { createdAt: "ASC" },
+      order: { order: "ASC", createdAt: "ASC" },
     });
 
     if (!song) {
@@ -190,6 +196,13 @@ export class SongService {
     }
 
     song.allowed = allowed;
+
+    const allowedSongsCount = await this.songRepository.count({
+      where: { personId: song.personId, allowed: true },
+    });
+
+    song.allowedOrder = allowed ? allowedSongsCount + 1 : null;
+
     return this.songRepository.save(song);
   }
 
@@ -199,5 +212,22 @@ export class SongService {
       throw new NotFoundException("Song not found");
     }
     await this.songRepository.remove(song);
+  }
+
+  async findNextToPlay(eventId: string): Promise<Song | null> {
+    const song = await this.songRepository.findOne({
+      where: { allowed: true, playedAt: IsNull(), person: { eventId } },
+      relations: ["person"],
+      order: { allowedOrder: "ASC", createdAt: "ASC" },
+    });
+
+    if (!song) {
+      return null;
+    }
+
+    // song.playedAt = new Date();
+    // await this.songRepository.save(song);
+
+    return song;
   }
 }

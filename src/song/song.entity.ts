@@ -45,4 +45,10 @@ export class Song {
 
   @Column({ nullable: true, type: "datetime" })
   playedAt: Date | null;
+
+  @Column({ nullable: true, type: "int" })
+  order: number | null;
+
+  @Column({ nullable: true, type: "int" })
+  allowedOrder: number | null;
 }
