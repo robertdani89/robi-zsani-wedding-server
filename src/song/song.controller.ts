@@ -36,6 +36,11 @@ export class SongController {
     return this.songService.findNextPending(eventId);
   }
 
+  @Get("next-to-play")
+  async findNextToPlay(@Query("eventId") eventId: string) {
+    return this.songService.findNextToPlay(eventId);
+  }
+
   @Get("persons/:personId")
   async findByPerson(@Param("personId") personId: string) {
     return this.songService.findByPerson(personId);

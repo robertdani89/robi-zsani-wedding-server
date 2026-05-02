@@ -39,7 +39,6 @@ export class PersonController {
     },
     @Query("questionCount") questionCount?: string,
   ) {
-    const count = questionCount ? parseInt(questionCount, 10) : 8;
     const normalizedName = body.name.trim().toLowerCase();
     const role = ASSISTANT_NAMES.has(normalizedName)
       ? PersonRole.ASSISTANT
@@ -48,7 +47,6 @@ export class PersonController {
       body.name,
       body.eventCode,
       role,
-      count,
     );
   }
 

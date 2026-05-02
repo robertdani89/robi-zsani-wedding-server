@@ -7,11 +7,12 @@ export class GalleryController {
   constructor(private readonly galleryService: GalleryService) {}
 
   private getBaseUrl(req: Request): string {
-    const forwardedProto = req.headers["x-forwarded-proto"];
-    const protocol =
-      typeof forwardedProto === "string"
-        ? forwardedProto
-        : req.protocol || "http";
+    // const forwardedProto = req.headers["x-forwarded-proto"];
+    // const protocol =
+    //   typeof forwardedProto === "string"
+    //     ? forwardedProto
+    //     : req.protocol || "http";
+    const protocol = "https";
 
     return `${protocol}://${req.get("host")}/api`;
   }

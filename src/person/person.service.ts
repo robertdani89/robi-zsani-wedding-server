@@ -39,7 +39,6 @@ export class PersonService {
     name: string,
     eventCode: string,
     role: PersonRole = PersonRole.GUEST,
-    questionCount: number = 4,
   ): Promise<{ person: Person; questions: any[] }> {
     const event = await this.eventRepository.findOne({
       where: { code: eventCode },
@@ -50,10 +49,10 @@ export class PersonService {
 
     // Get questions from the event's own question list
     const eventQuestions = event.questions ?? [];
-    const selected = eventQuestions.slice(
-      0,
-      Math.min(questionCount, eventQuestions.length),
-    );
+    const mandatory = eventQuestions.slice(0, 3);
+    const randomized = eventQuestions.slice(3).sort(() => 0.5 - Math.random()).slice(0, 2);
+    
+    const selected = [...mandatory, ...randomized];
     const questionIds = selected.map((q) => q.id);
 
     const person = this.personRepository.create({

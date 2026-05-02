@@ -22,10 +22,10 @@ export class EventController {
     return this.eventService.create(createEventDto);
   }
 
-  @Get()
-  findAll() {
-    return this.eventService.findAll();
-  }
+  // @Get()
+  // findAll() {
+  //   return this.eventService.findAll();
+  // }
 
   @Get("code/:code")
   async findByCode(@Param("code") code: string) {
@@ -33,6 +33,9 @@ export class EventController {
     if (!event) {
       throw new NotFoundException(`Event with code "${code}" not found`);
     }
+
+    delete event.questions;
+
     return event;
   }
 
@@ -42,6 +45,9 @@ export class EventController {
     if (!event) {
       throw new NotFoundException(`Event with id "${id}" not found`);
     }
+
+    delete event.questions;
+
     return event;
   }
 
